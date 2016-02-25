@@ -1,9 +1,12 @@
 #pragma once
 
+#include "boost/context/all.hpp"
+#include "boost/context/detail/config.hpp"
+
 namespace ctx {
 
-struct ctx {
-// TODO
+struct context {
+
 };
 
 }  // namespace ctx

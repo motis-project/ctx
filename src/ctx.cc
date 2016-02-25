@@ -1,3 +1,7 @@
-#include <string>
+#include "ctx/operation.h"
 
-std::string const hello_world;
+namespace ctx {
+
+thread_local operation* operation::this_op;
+
+}  // namespace ctx
