@@ -82,11 +82,26 @@ public:
     }
 
     typename std::vector<queue_element>::iterator next_data() {
-      return std::find_if(begin(ch_.queue_), end(ch_.queue_),
-                          [this](queue_element const& el) {
-                            return id_ == any || el.topic == id_;
-                          });
+      // return std::find_if(begin(ch_.queue_), end(ch_.queue_),
+      //                     [this](queue_element const& el) {
+      //                       return id_ == any || el.topic == id_;
+      //                     });
+
+
+      // return std::find_if(ch_.queue_.rbegin(), ch_.queue_.rend(),
+      //                    [this](queue_element const& el) {
+      //                      return id_ == any || el.topic == id_;
+      //                    })
+      //    .base();
+
+      if(ch_.queue_.size() > 0) {
+        return std::prev(ch_.queue_.end());
+      } else {
+        return ch_.queue_.end();
+      }
     }
+
+
 
     bool is_data_available() { return next_data() != end(ch_.queue_); }
 
