@@ -2,6 +2,6 @@
 
 namespace ctx {
 
-__thread operation* operation::this_op;
+thread_local operation* operation::this_op;
 
 }  // namespace ctx

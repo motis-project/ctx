@@ -33,8 +33,8 @@ int main() {
   std::atomic<int> c(iterations);
   for (int i = 0; i < iterations; ++i) {
     sched.enqueue(new operation([&]() {
-      // auto f = sched.post([&]() { return 5; });
-      // printf("operation: %d\n", f->get());
+      auto f = sched.post([&]() { return 5; });
+      printf("operation: %d\n", f->get());
       --c;
       if (c == 0) {
         sched.queue_.stop();
