@@ -1,33 +1,27 @@
 #pragma once
 
-#include "ctx/condition_state.h"
+#include <mutex>
 
 namespace ctx {
 
+struct operation;
+
 struct condition_variable {
-  condition_variable() : op_(op::this_op) {}
+  condition_variable();
 
   template <typename Predicate>
-  void wait(Predicate pred) {
-    state_.mutex.lock();
+  void wait(std::unique_lock<std::mutex>& lock, Predicate pred) {
     while (!pred()) {
+      lock.unlock();
       wait();
+      lock.lock();
     }
   }
 
-  void wait() {
-    state_.suspended = false;
-    op_->suspend();
-  }
-
-  void notify() {
-    state_.mutex.lock();
-    op_->scheduler.resume(op_);
-    state_.mutex.unlock();
-  }
+  void wait();
+  void notify();
 
   operation* op_;
-  condition_state state_;
 };
 
 }  // namespace ctx

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <mutex>
 
 namespace ctx {
 
@@ -17,16 +18,19 @@ inline void* allocate(std::size_t const num_bytes) {
 struct stack_manager {
   ~stack_manager() {
     for (auto stack : free_stacks_) {
-      dealloc(stack);
+      free(stack);
     }
+    free_stacks_.clear();
   }
 
   void* alloc() {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto stack = free_stacks_.empty() ? allocate(kStackSize) : get_free_stack();
     return static_cast<char*>(stack) + kStackSize;
   }
 
   void dealloc(void* stack) {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (stack == nullptr) {
       return;
     }
@@ -42,6 +46,7 @@ private:
   }
 
   std::vector<void*> free_stacks_;
+  std::mutex mutex_;
 };
 
 }  // namespace ctx

@@ -1,16 +1,24 @@
 #pragma once
 
+#include <type_traits>
 #include <exception>
+#include <mutex>
 #include <atomic>
+
+#include "ctx/condition_variable.h"
 
 namespace ctx {
 
-template <>
-struct future {
+template <typename T, typename Enable = void>
+struct future {};
+
+template <typename T>
+struct future<T, typename std::enable_if<!std::is_same<T, void>::value>::type> {
   future() {}
 
   T& get() {
-    cv_.wait([&]() { return result_available_; });
+    std::unique_lock<std::mutex> lock(mutex_);
+    cv_.wait(lock, [&]() { return result_available_; });
     if (exception_) {
       std::rethrow_exception(exception_);
     } else {
@@ -18,20 +26,56 @@ struct future {
     }
   }
 
-  void set(T&& result, std::exception_ptr exception) {
-    {
-      std::lock_guard<std::mutex> lock(cv_.state_.mutex);
-      result_ = std::move(result);
-      exception_ = std::move(exception);
-      result_available_ = true;
-    }
+  void set(T&& result) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    result_ = std::move(result);
+    result_available_ = true;
+    cv_.notify();
+  }
+
+  void set(std::exception_ptr e) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    exception_ = e;
+    result_available_ = true;
     cv_.notify();
   }
 
   T result_;
   std::exception_ptr exception_;
+  std::mutex mutex_;
   condition_variable cv_;
   bool result_available_;
 };
 
-// namespace ctx
+template <typename T>
+struct future<T, typename std::enable_if<std::is_same<T, void>::value>::type> {
+  future() {}
+
+  void get() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    cv_.wait(lock, [&]() { return result_available_; });
+    if (exception_) {
+      std::rethrow_exception(exception_);
+    }
+  }
+
+  void set() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    result_available_ = true;
+    cv_.notify();
+  }
+
+  void set(std::exception_ptr e) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    exception_ = e;
+    result_available_ = true;
+    cv_.notify();
+  }
+
+  std::exception_ptr exception_;
+  std::mutex mutex_;
+  condition_variable cv_;
+  bool result_available_;
+};
+
+}  // namespace ctx
