@@ -32,49 +32,44 @@ struct operation {
   }
 
   void resume() {
-    assert(!finished_);
-
-    running_mutex_.lock();
-    if (running_) {
-      reschedule_ = true;
-      running_mutex_.unlock();
-      return;
+    {
+      std::lock_guard<std::mutex> lock(state_mutex_);
+      if (finished_) {
+        return;
+      }
+      if (running_) {
+        reschedule_ = true;
+        return;
+      }
+      running_ = true;
     }
-
-    running_ = true;
 
     if (stack_ == nullptr) {
       init();
     }
 
     this_op = this;
-    boost::context::jump_fcontext(&main_ctx_, op_ctx_, me(), false);
+    auto finished =
+        boost::context::jump_fcontext(&main_ctx_, op_ctx_, me(), false);
 
-    if (reschedule_) {
-      sched_.enqueue(this);
-      reschedule_ = false;
-    }
-    running_mutex_.unlock();
-
-    if (finished_) {
-      return;  // post return value
+    {
+      std::lock_guard<std::mutex> lock(state_mutex_);
+      if (reschedule_) {
+        sched_.enqueue(this);
+        reschedule_ = false;
+      }
+      finished_ = finished;
+      running_ = false;
     }
   }
 
-  void suspend() {
-    running_mutex_.lock();
-    running_ = false;
-    boost::context::jump_fcontext(&op_ctx_, main_ctx_, 0, false);
-    running_mutex_.unlock();
+  void suspend(bool finished) {
+    boost::context::jump_fcontext(&op_ctx_, main_ctx_, finished, false);
   }
-
-  static thread_local operation* this_op;
 
   void start() {
-    running_mutex_.unlock();
     fn_();
-    finished_ = true;
-    suspend();
+    suspend(true);
   }
 
   void init() {
@@ -91,10 +86,12 @@ struct operation {
   scheduler& sched_;
   std::function<void()> fn_;
 
-  std::mutex running_mutex_;
+  std::mutex state_mutex_;
   bool running_;
   bool reschedule_;
   bool finished_;
+
+  static thread_local operation* this_op;
 };
 
 inline void execute(intptr_t op_ptr) {
