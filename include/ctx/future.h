@@ -78,4 +78,7 @@ struct future<T, typename std::enable_if<std::is_same<T, void>::value>::type> {
   bool result_available_;
 };
 
+template <typename T>
+using future_ptr = std::shared_ptr<future<T>>;
+
 }  // namespace ctx

@@ -32,6 +32,11 @@ struct operation : public std::enable_shared_from_this<operation> {
     stack_ = nullptr;
   }
 
+  template <typename Fn>
+  auto call(Fn fn) -> std::shared_ptr<future<decltype(fn())>> {
+    return sched_.post(fn);
+  }
+
   void resume() {
     {
       std::lock_guard<std::mutex> lock(state_mutex_);
