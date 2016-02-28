@@ -32,7 +32,7 @@ int main() {
   constexpr auto iterations = 100000;
   std::atomic<int> c(iterations);
   for (int i = 0; i < iterations; ++i) {
-    sched.enqueue(new operation([&]() {
+    sched.enqueue(std::make_shared<operation>([&]() {
       auto f = sched.post([&]() { return 5; });
       printf("operation: %d\n", f->get());
       --c;

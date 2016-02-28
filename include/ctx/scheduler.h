@@ -45,9 +45,11 @@ struct scheduler {
 
   void enqueue(std::function<void()> fn);
 
-  void enqueue(operation* op) { queue_[queue_.any] << op; }
+  void enqueue(std::shared_ptr<operation> const& op) {
+    queue_[queue_.any] << op;
+  }
 
-  channel<operation*> queue_;
+  channel<std::shared_ptr<operation>> queue_;
   stack_manager stack_manager_;
 };
 

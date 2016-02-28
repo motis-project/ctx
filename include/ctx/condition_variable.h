@@ -21,7 +21,7 @@ struct condition_variable {
   void wait();
   void notify();
 
-  operation* op_;
+  std::weak_ptr<operation> caller_;
 };
 
 }  // namespace ctx

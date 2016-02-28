@@ -2,6 +2,7 @@
 
 #include <cinttypes>
 #include <functional>
+#include <memory>
 #include <atomic>
 
 #include "boost/context/all.hpp"
@@ -14,7 +15,7 @@ struct condition_variable;
 struct operation;
 void execute(intptr_t);
 
-struct operation {
+struct operation : public std::enable_shared_from_this<operation> {
   friend condition_variable;
   friend void execute(intptr_t);
 
@@ -55,7 +56,7 @@ struct operation {
     {
       std::lock_guard<std::mutex> lock(state_mutex_);
       if (reschedule_) {
-        sched_.enqueue(this);
+        sched_.enqueue(shared_from_this());
         reschedule_ = false;
       }
       finished_ = finished;
@@ -64,6 +65,10 @@ struct operation {
   }
 
   void suspend(bool finished) {
+    std::shared_ptr<operation> self;
+    if (!finished) {
+      self = shared_from_this();
+    }
     boost::context::jump_fcontext(&op_ctx_, main_ctx_, finished, false);
   }
 
