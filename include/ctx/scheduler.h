@@ -2,7 +2,8 @@
 
 #include <memory>
 
-#include "ctx/channel.h"
+#include "boost/asio/io_service.hpp"
+
 #include "ctx/stack_manager.h"
 #include "ctx/future.h"
 
@@ -44,12 +45,9 @@ struct scheduler {
   }
 
   void enqueue(std::function<void()> fn);
+  void enqueue(std::shared_ptr<operation> op);
 
-  void enqueue(std::shared_ptr<operation> const& op) {
-    queue_[queue_.any] << op;
-  }
-
-  channel<std::shared_ptr<operation>> queue_;
+  boost::asio::io_service ios_;
   stack_manager stack_manager_;
 };
 

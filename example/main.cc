@@ -12,7 +12,6 @@
 #include "ctx/future.h"
 #include "ctx/operation.h"
 #include "ctx/scheduler.h"
-#include "ctx/worker.h"
 
 using namespace ctx;
 
@@ -39,13 +38,13 @@ int run();
 int run() {
   int sleep = gen.get() * 1000;
   std::vector<future_ptr<int>> futures;
-  for (int i = 0; i < 100; ++i) {
+  for (int i = 0; i < 10; ++i) {
     usleep(sleep);
     if (gen.get() > 0.9) {
       auto f = operation::this_op->call(run);
-      if (gen.get() > 0.5) {
+      // if (gen.get() > 0.5) {
         futures.emplace_back(std::move(f));
-      }
+      // }
     }
   }
   int sum = sleep + std::accumulate(
@@ -59,7 +58,7 @@ int main() {
   randomness rand(100000);
 
   scheduler sched;
-  constexpr auto iterations = 100000;
+  constexpr auto iterations = 3;
   std::atomic<int> c(iterations);
   for (int i = 0; i < iterations; ++i) {
     sched.enqueue(std::make_shared<operation>(run, sched));
@@ -68,7 +67,9 @@ int main() {
   int worker_count = 10;
   std::vector<boost::thread> threads(worker_count);
   for (int i = 0; i < worker_count; ++i) {
-    threads[i] = boost::thread([&]() { worker(sched.queue_).run(); });
+    threads[i] = boost::thread([&]() { 
+      sched.ios_.run();
+    });
   }
   std::for_each(begin(threads), end(threads),
                 [](boost::thread& t) { t.join(); });

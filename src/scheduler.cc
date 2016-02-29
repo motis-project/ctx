@@ -5,7 +5,11 @@
 namespace ctx {
 
 void scheduler::enqueue(std::function<void()> fn) {
-  queue_[queue_.any] << std::make_shared<operation>(fn, *this);
+  enqueue(std::make_shared<operation>(fn, *this));
+}
+
+void scheduler::enqueue(std::shared_ptr<operation> op) {
+  ios_.post([op]() { op->resume(); });
 }
 
 }  // namespace ctx
