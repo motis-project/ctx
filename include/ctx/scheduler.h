@@ -24,6 +24,7 @@ struct scheduler {
       try {
         f->set(fn());
       } catch (...) {
+        // TODO dont jump in catch block!
         f->set(std::current_exception());
       }
     }));
@@ -38,6 +39,7 @@ struct scheduler {
         fn();
         f->set();
       } catch (...) {
+        // TODO dont jump in catch block!
         f->set(std::current_exception());
       }
     }));
