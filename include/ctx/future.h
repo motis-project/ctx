@@ -16,7 +16,7 @@ template <typename T>
 struct future<T, typename std::enable_if<!std::is_same<T, void>::value>::type> {
   future() : result_available_(false) {}
 
-  T& get() {
+  T& val() {
     std::unique_lock<std::mutex> lock(mutex_);
     cv_.wait(lock, [&]() { return result_available_; });
     if (exception_) {

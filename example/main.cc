@@ -12,9 +12,12 @@
 #include "ctx/future.h"
 #include "ctx/operation.h"
 #include "ctx/scheduler.h"
+#include "test/fibonacci.h"
 
 using namespace ctx;
+using namespace test;
 
+/*
 struct randomness {
   randomness(std::size_t num_values) : v_(num_values), i_(0) {
     std::srand(std::time(0));
@@ -53,8 +56,10 @@ int run() {
   printf("%d\n", sum);
   return sum;
 }
+*/
 
 int main() {
+  /*
   randomness rand(100000);
 
   scheduler sched;
@@ -63,8 +68,22 @@ int main() {
   for (int i = 0; i < iterations; ++i) {
     sched.enqueue(std::make_shared<operation>(run, sched));
   }
+  */
 
-  int worker_count = 10;
+  constexpr auto kCount = 30;
+
+  std::vector<int> expected;
+  for(int i = 0; i < kCount; ++i) {
+    expected.push_back(iterfib(i));
+  }
+
+  scheduler sched;
+  for (int i = 0; i < kCount; ++i) {
+    sched.enqueue(std::make_shared<operation>(std::bind(check, i, expected[i]), sched));
+  }
+
+
+  int worker_count = 8;
   std::vector<boost::thread> threads(worker_count);
   for (int i = 0; i < worker_count; ++i) {
     threads[i] = boost::thread([&]() { 

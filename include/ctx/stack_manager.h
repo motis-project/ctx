@@ -26,6 +26,7 @@ inline void* allocate(std::size_t const num_bytes) {
   return mem;
 }
 
+/*
 struct stack_manager {
   ~stack_manager() {
     for (auto stack : free_stacks_) {
@@ -41,7 +42,7 @@ struct stack_manager {
 #ifdef ENABLE_VALGRIND
     auto id = VALGRIND_STACK_REGISTER(static_cast<char*>(stack) + kStackSize, stack);
 #else
-    auto id = 42;
+    unsigned int id = 42;
 #endif
 
     return {static_cast<char*>(stack) + kStackSize, id};
@@ -69,6 +70,25 @@ private:
 
   std::vector<void*> free_stacks_;
   std::mutex mutex_;
+};*/
+
+struct stack_manager {
+  stack_handle alloc() {
+    auto stack = static_cast<char*>(allocate(kStackSize)) + kStackSize;
+#ifdef ENABLE_VALGRIND
+    auto id = VALGRIND_STACK_REGISTER(static_cast<char*>(stack) + kStackSize, stack);
+#else
+    unsigned int id = 42;
+#endif
+    return {stack, id};
+  }
+  void dealloc(stack_handle const& handle) {
+    free(static_cast<char*>(handle.mem) - kStackSize);
+
+#ifdef ENABLE_VALGRIND
+    VALGRIND_STACK_DEREGISTER(handle.id);
+#endif
+  }
 };
 
 }  // namespace ctx
