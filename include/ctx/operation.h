@@ -20,7 +20,7 @@ struct operation : public std::enable_shared_from_this<operation> {
   friend void execute(intptr_t);
 
   operation(std::function<void()> fn, scheduler& sched)
-      : stack_(nullptr),
+      : stack_({nullptr, 0}),
         sched_(sched),
         fn_(fn),
         running_(false),
@@ -29,7 +29,7 @@ struct operation : public std::enable_shared_from_this<operation> {
 
   ~operation() {
     sched_.stack_manager_.dealloc(stack_);
-    stack_ = nullptr;
+    stack_.mem = nullptr;
   }
 
   template <typename Fn>
@@ -50,7 +50,7 @@ struct operation : public std::enable_shared_from_this<operation> {
       running_ = true;
     }
 
-    if (stack_ == nullptr) {
+    if (stack_.mem == nullptr) {
       init();
     }
 
@@ -84,12 +84,12 @@ struct operation : public std::enable_shared_from_this<operation> {
 
   void init() {
     stack_ = sched_.stack_manager_.alloc();
-    op_ctx_ = boost::context::make_fcontext(stack_, kStackSize, execute);
+    op_ctx_ = boost::context::make_fcontext(stack_.mem, kStackSize, execute);
   }
 
   intptr_t me() const { return reinterpret_cast<intptr_t>(this); }
 
-  void* stack_;
+  stack_handle stack_;
   boost::context::fcontext_t op_ctx_;
   boost::context::fcontext_t main_ctx_;
 

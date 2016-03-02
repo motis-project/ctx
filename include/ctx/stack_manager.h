@@ -3,9 +3,20 @@
 #include <vector>
 #include <mutex>
 
+// #define ENABLE_VALGRIND
+
+#ifdef ENABLE_VALGRIND
+#include "valgrind/valgrind.h"
+#endif
+
 namespace ctx {
 
 constexpr auto kStackSize = 64 * 1024;
+
+struct stack_handle {
+  void* mem;
+  unsigned int id;
+};
 
 inline void* allocate(std::size_t const num_bytes) {
   auto mem = std::malloc(num_bytes);
@@ -23,19 +34,30 @@ struct stack_manager {
     free_stacks_.clear();
   }
 
-  void* alloc() {
+  stack_handle alloc() {
     std::lock_guard<std::mutex> lock(mutex_);
     auto stack = free_stacks_.empty() ? allocate(kStackSize) : get_free_stack();
-    return static_cast<char*>(stack) + kStackSize;
+
+#ifdef ENABLE_VALGRIND
+    auto id = VALGRIND_STACK_REGISTER(stack + kStackSize, stack);
+#else
+    auto id = 42;
+#endif
+
+    return {static_cast<char*>(stack) + kStackSize, id};
   }
 
-  void dealloc(void* stack) {
+  void dealloc(stack_handle handle) {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (stack == nullptr) {
+    if (handle.mem == nullptr) {
       return;
     }
-    void* limit = static_cast<char*>(stack) - kStackSize;
+    void* limit = static_cast<char*>(handle.mem) - kStackSize;
     free_stacks_.push_back(limit);
+
+#ifdef ENABLE_VALGRIND
+    VALGRIND_STACK_DEREGISTER(handle.id);
+#endif
   }
 
 private:
