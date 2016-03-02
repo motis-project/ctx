@@ -21,12 +21,14 @@ struct scheduler {
     using return_t = decltype(fn());
     auto f = std::make_shared<future<return_t>>();
     enqueue(std::function<void()>([f, fn]() {
+      std::exception_ptr ex;
       try {
         f->set(fn());
+        return;
       } catch (...) {
-        // TODO dont jump in catch block!
-        f->set(std::current_exception());
+        ex = std::current_exception();
       }
+      f->set(ex);
     }));
     return f;
   }
@@ -35,13 +37,15 @@ struct scheduler {
   auto post_void(Fn fn) {
     auto f = std::make_shared<future<void>>();
     enqueue(std::function<void()>([f, fn]() {
+      std::exception_ptr ex;
       try {
         fn();
         f->set();
+        return;
       } catch (...) {
-        // TODO dont jump in catch block!
-        f->set(std::current_exception());
+        ex = std::current_exception();
       }
+      f->set(ex);
     }));
     return f;
   }

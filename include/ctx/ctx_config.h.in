@@ -1,0 +1,9 @@
+#pragma once
+
+namespace ctx {
+
+#if @CTX_ENABLE_VALGRIND@
+#define CTX_ENABLE_VALGRIND 1
+#endif
+
+}  // namespace ctx

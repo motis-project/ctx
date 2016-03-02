@@ -11,14 +11,9 @@
 
 namespace ctx {
 
-struct condition_variable;
-struct operation;
 void execute(intptr_t);
 
 struct operation : public std::enable_shared_from_this<operation> {
-  friend condition_variable;
-  friend void execute(intptr_t);
-
   operation(std::function<void()> fn, scheduler& sched)
       : stack_({nullptr, 0}),
         sched_(sched),
