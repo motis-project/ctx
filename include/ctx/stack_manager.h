@@ -76,7 +76,7 @@ struct stack_manager {
   stack_handle alloc() {
     auto stack = static_cast<char*>(allocate(kStackSize)) + kStackSize;
 #ifdef ENABLE_VALGRIND
-    auto id = VALGRIND_STACK_REGISTER(static_cast<char*>(stack) + kStackSize, stack);
+    auto id = VALGRIND_STACK_REGISTER(static_cast<char*>(stack) - kStackSize, stack);
 #else
     unsigned int id = 42;
 #endif
