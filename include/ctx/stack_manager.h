@@ -39,7 +39,7 @@ struct stack_manager {
     auto stack = free_stacks_.empty() ? allocate(kStackSize) : get_free_stack();
 
 #ifdef ENABLE_VALGRIND
-    auto id = VALGRIND_STACK_REGISTER(stack + kStackSize, stack);
+    auto id = VALGRIND_STACK_REGISTER(static_cast<char*>(stack) + kStackSize, stack);
 #else
     auto id = 42;
 #endif
