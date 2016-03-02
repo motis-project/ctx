@@ -29,7 +29,7 @@ struct operation : public std::enable_shared_from_this<operation> {
 
   template <typename Fn>
   auto call(Fn fn) -> std::shared_ptr<future<decltype(fn())>> {
-    return sched_.post(fn);
+    return sched_.post(std::forward<Fn>(fn));
   }
 
   void resume() {

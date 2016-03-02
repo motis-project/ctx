@@ -29,11 +29,14 @@ struct stack_manager {
   stack_handle alloc() {
     auto id = 0u;
     auto stack = static_cast<char*>(allocate(kStackSize));
+
 #ifdef CTX_ENABLE_VALGRIND
     id = VALGRIND_STACK_REGISTER(stack, static_cast<char*>(stack) + kStackSize);
 #endif
+
     return {stack + kStackSize, id};
   }
+
   void dealloc(stack_handle const& handle) {
     std::free(static_cast<char*>(handle.mem) - kStackSize);
 
