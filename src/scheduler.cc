@@ -5,7 +5,7 @@
 namespace ctx {
 
 void scheduler::enqueue(std::function<void()> fn) {
-  enqueue(std::make_shared<operation>(fn, *this));
+  enqueue(std::make_shared<operation>(std::move(fn), *this));
 }
 
 void scheduler::enqueue(std::shared_ptr<operation> op) {
