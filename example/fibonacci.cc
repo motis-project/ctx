@@ -28,7 +28,7 @@ int iterfib(int count) {
   return j;
 }
 
-int recfib(int i) {
+int recfib_sync(int i) {
   if (i == 0) {
     return 0;
   }
@@ -36,13 +36,21 @@ int recfib(int i) {
     return 1;
   }
 
-  auto res_1 = operation::this_op->call(std::bind(recfib, i - 1));
-  auto res_2 = operation::this_op->call(std::bind(recfib, i - 2));
+  return recfib_sync(i - 1) + recfib_sync(i - 2);
+}
+
+int recfib_async(int i) {
+  if (i < 20) {
+    return recfib_sync(i);
+  }
+
+  auto res_1 = operation::this_op->call(std::bind(recfib_async, i - 1));
+  auto res_2 = operation::this_op->call(std::bind(recfib_async, i - 2));
   return res_1->val() + res_2->val();
 }
 
 void check(int n, int expected) {
-  auto actual = operation::this_op->call(std::bind(recfib, n))->val();
+  auto actual = operation::this_op->call(std::bind(recfib_async, n))->val();
 
   if (actual == expected) {
     printf("fib result matched %d: %d\n", n, expected);
@@ -52,7 +60,7 @@ void check(int n, int expected) {
 }
 
 int main() {
-  constexpr auto kCount = 30;
+  constexpr auto kCount = 40;
 
   std::vector<int> expected;
   for (int i = 0; i < kCount; ++i) {
