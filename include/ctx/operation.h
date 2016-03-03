@@ -2,6 +2,7 @@
 
 #include <cinttypes>
 #include <functional>
+#include <mutex>
 #include <memory>
 #include <atomic>
 
@@ -21,10 +22,7 @@ struct operation : public std::enable_shared_from_this<operation> {
         reschedule_(false),
         finished_(false) {}
 
-  ~operation() {
-    sched_.stack_manager_.dealloc(stack_);
-    stack_.mem = nullptr;
-  }
+  ~operation() { sched_.stack_manager_.dealloc(stack_); }
 
   template <typename Fn>
   auto call(Fn fn) -> std::shared_ptr<future<decltype(fn())>> {
@@ -44,7 +42,7 @@ struct operation : public std::enable_shared_from_this<operation> {
       running_ = true;
     }
 
-    if (stack_.mem == nullptr) {
+    if (stack_.get_stack() == nullptr) {
       init();
     }
 
@@ -75,7 +73,8 @@ struct operation : public std::enable_shared_from_this<operation> {
 
   void init() {
     stack_ = sched_.stack_manager_.alloc();
-    op_ctx_ = boost::context::make_fcontext(stack_.mem, kStackSize, execute);
+    op_ctx_ =
+        boost::context::make_fcontext(stack_.get_stack(), kStackSize, execute);
   }
 
   intptr_t me() const { return reinterpret_cast<intptr_t>(this); }
