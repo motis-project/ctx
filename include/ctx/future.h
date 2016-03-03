@@ -49,7 +49,7 @@ struct future<T, typename std::enable_if<!std::is_same<T, void>::value>::type> {
 
 template <typename T>
 struct future<T, typename std::enable_if<std::is_same<T, void>::value>::type> {
-  future() {}
+  future() : result_available_(false) {}
 
   void get() {
     std::unique_lock<std::mutex> lock(mutex_);
