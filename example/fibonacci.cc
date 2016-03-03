@@ -69,8 +69,7 @@ int main() {
 
   scheduler sched;
   for (int i = 0; i < kCount; ++i) {
-    sched.enqueue(
-        std::make_shared<operation>(std::bind(check, i, expected[i]), sched));
+    sched.enqueue_initial(std::bind(check, i, expected[i]));
   }
 
   int worker_count = 8;

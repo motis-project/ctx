@@ -53,6 +53,8 @@ struct scheduler {
   void enqueue(std::function<void()> fn);
   void enqueue(std::shared_ptr<operation> op);
 
+  void enqueue_initial(std::function<void()> fn);
+
   boost::asio::io_service ios_;
   stack_manager stack_manager_;
 };
