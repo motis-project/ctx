@@ -10,11 +10,16 @@
 
 namespace ctx {
 
-constexpr auto kStackSize = 64 * 1024;
+constexpr auto kStackSize = 8 * 1024;
 
 struct stack_handle {
+  stack_handle() : mem(nullptr) {}
+
   void* mem;
-  unsigned int id;
+
+#ifdef CTX_ENABLE_VALGRIND
+  unsigned id;
+#endif
 };
 
 inline void* allocate(std::size_t const num_bytes) {
@@ -27,21 +32,23 @@ inline void* allocate(std::size_t const num_bytes) {
 
 struct stack_manager {
   stack_handle alloc() {
-    auto id = 0u;
-    auto stack = static_cast<char*>(allocate(kStackSize));
+    stack_handle s;
+    s.mem = static_cast<char*>(allocate(kStackSize)) + kStackSize;
 
 #ifdef CTX_ENABLE_VALGRIND
-    id = VALGRIND_STACK_REGISTER(stack, static_cast<char*>(stack) + kStackSize);
+    auto from = s.mem;
+    auto to = static_cast<char*>(from) - kStackSize;
+    s.id = VALGRIND_STACK_REGISTER(from, to);
 #endif
 
-    return {stack + kStackSize, id};
+    return s;
   }
 
-  void dealloc(stack_handle const& handle) {
-    std::free(static_cast<char*>(handle.mem) - kStackSize);
+  void dealloc(stack_handle const& s) {
+    std::free(static_cast<char*>(s.mem) - kStackSize);
 
 #ifdef CTX_ENABLE_VALGRIND
-    VALGRIND_STACK_DEREGISTER(handle.id);
+    VALGRIND_STACK_DEREGISTER(s.id);
 #endif
   }
 };

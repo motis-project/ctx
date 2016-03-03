@@ -15,9 +15,8 @@ void execute(intptr_t);
 
 struct operation : public std::enable_shared_from_this<operation> {
   operation(std::function<void()> fn, scheduler& sched)
-      : stack_({nullptr, 0}),
-        sched_(sched),
-        fn_(fn),
+      : sched_(sched),
+        fn_(std::move(fn)),
         running_(false),
         reschedule_(false),
         finished_(false) {}
@@ -65,10 +64,7 @@ struct operation : public std::enable_shared_from_this<operation> {
   }
 
   void suspend(bool finished) {
-    std::shared_ptr<operation> self;
-    if (!finished) {
-      self = shared_from_this();
-    }
+    std::shared_ptr<operation> self = finished ? nullptr : shared_from_this();
     boost::context::jump_fcontext(&op_ctx_, main_ctx_, finished, false);
   }
 
