@@ -17,17 +17,17 @@ struct stack_handle {
   stack_handle(void* allocated_mem) { set_allocated_mem(allocated_mem); }
 
   inline void* get_allocated_mem() {
-    return (stack == nullptr) ? nullptr : stack - kStackSize;
+    return stack == nullptr ? nullptr : static_cast<char*>(stack) - kStackSize;
   }
 
   inline void set_allocated_mem(void* mem) {
-    stack = (mem == nullptr) ? nullptr : mem + kStackSize;
+    stack = mem == nullptr ? nullptr : static_cast<char*>(mem) + kStackSize;
   }
 
   inline void* get_stack() { return stack; }
 
   inline void* get_stack_end() {
-    return (stack == nullptr) ? nullptr : stack - kStackSize;
+    return stack == nullptr ? nullptr : static_cast<char*>(stack) - kStackSize;
   }
 
 #ifdef CTX_ENABLE_VALGRIND
