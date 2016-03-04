@@ -24,11 +24,6 @@ struct operation : public std::enable_shared_from_this<operation> {
 
   ~operation() { sched_.stack_manager_.dealloc(stack_); }
 
-  template <typename Fn>
-  auto call(Fn fn) -> std::shared_ptr<future<decltype(fn())>> {
-    return sched_.post(std::forward<Fn>(fn));
-  }
-
   void resume() {
     {
       std::lock_guard<std::mutex> lock(state_mutex_);
@@ -93,6 +88,11 @@ struct operation : public std::enable_shared_from_this<operation> {
 
   static thread_local operation* this_op;
 };
+
+template <typename Fn>
+auto call(Fn fn) -> std::shared_ptr<future<decltype(fn())>> {
+  return operation::this_op->sched_.post(std::forward<Fn>(fn));
+}
 
 inline void execute(intptr_t op_ptr) {
   reinterpret_cast<operation*>(op_ptr)->start();

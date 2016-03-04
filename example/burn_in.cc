@@ -43,23 +43,24 @@ void sleep_maybe() {
 int work() {
   sleep_maybe();
 
-  if(sleep_dist(gen)) {
+  if (sleep_dist(gen)) {
     throw std::runtime_error("error");
   }
 
-  if(branch_dist(gen)) {
+  if (branch_dist(gen)) {
     std::vector<future_ptr<int>> futures;
     auto count = int_dist(gen);
-    for(int i = 0; i < count; ++i) {
-      futures.push_back(operation::this_op->call(work));
+    for (int i = 0; i < count; ++i) {
+      futures.push_back(call(work));
     }
 
     int result = 0;
-    for(int i = 0; i < count; ++i) {
-      if(catch_dist(gen)) {
+    for (int i = 0; i < count; ++i) {
+      if (catch_dist(gen)) {
         try {
           result += futures[i]->val();
-        } catch(...) {}
+        } catch (...) {
+        }
       } else {
         result += futures[i]->val();
       }
@@ -91,7 +92,7 @@ struct controller {
   }
 
   void submit_work() {
-    open_.push(operation::this_op->call(work));
+    open_.push(call(work));
     ++submitted_;
   }
 

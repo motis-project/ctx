@@ -44,13 +44,13 @@ int recfib_async(int i) {
     return recfib_sync(i);
   }
 
-  auto res_1 = operation::this_op->call(std::bind(recfib_async, i - 1));
-  auto res_2 = operation::this_op->call(std::bind(recfib_async, i - 2));
+  auto res_1 = call(std::bind(recfib_async, i - 1));
+  auto res_2 = call(std::bind(recfib_async, i - 2));
   return res_1->val() + res_2->val();
 }
 
 void check(int n, int expected) {
-  auto actual = operation::this_op->call(std::bind(recfib_async, n))->val();
+  auto actual = call(std::bind(recfib_async, n))->val();
 
   if (actual == expected) {
     printf("fib result matched %d: %d\n", n, expected);
