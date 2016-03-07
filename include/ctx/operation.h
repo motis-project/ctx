@@ -8,19 +8,29 @@
 
 #include "boost/context/all.hpp"
 
+#include "ctx/op_id.h"
 #include "ctx/scheduler.h"
+
+#define CTX_STRING1(x) #x
+#define CTX_STRING2(x) CTX_STRING1(x)
+#define CTX_LOCATION __FILE__ ":" CTX_STRING2(__LINE__)
+
+#define ctx_call(fn) ctx::call(fn, ctx::op_id("unknown", CTX_LOCATION))
 
 namespace ctx {
 
 void execute(intptr_t);
 
 struct operation : public std::enable_shared_from_this<operation> {
-  operation(std::function<void()> fn, scheduler& sched)
-      : sched_(sched),
+  operation(std::function<void()> fn, scheduler& sched, op_id id)
+      : id_(std::move(id)),
+        sched_(sched),
         fn_(std::move(fn)),
         running_(false),
         reschedule_(false),
-        finished_(false) {}
+        finished_(false) {
+    sched.tracker_.print_status();
+  }
 
   ~operation() { sched_.stack_manager_.dealloc(stack_); }
 
@@ -42,6 +52,7 @@ struct operation : public std::enable_shared_from_this<operation> {
     }
 
     this_op = this;
+    sched_.on_resume(id_);
     auto finished =
         boost::context::jump_fcontext(&main_ctx_, op_ctx_, me(), false);
 
@@ -57,6 +68,7 @@ struct operation : public std::enable_shared_from_this<operation> {
   }
 
   void suspend(bool finished) {
+    finished ? sched_.on_finish(id_) : sched_.on_suspend(id_, id_);
     std::shared_ptr<operation> self = finished ? nullptr : shared_from_this();
     boost::context::jump_fcontext(&op_ctx_, main_ctx_, finished, false);
   }
@@ -74,6 +86,8 @@ struct operation : public std::enable_shared_from_this<operation> {
 
   intptr_t me() const { return reinterpret_cast<intptr_t>(this); }
 
+  op_id id_;
+
   stack_handle stack_;
   boost::context::fcontext_t op_ctx_;
   boost::context::fcontext_t main_ctx_;
@@ -90,8 +104,8 @@ struct operation : public std::enable_shared_from_this<operation> {
 };
 
 template <typename Fn>
-auto call(Fn fn) -> std::shared_ptr<future<decltype(fn())>> {
-  return operation::this_op->sched_.post(std::forward<Fn>(fn));
+auto call(Fn fn, op_id id) -> std::shared_ptr<future<decltype(fn())>> {
+  return operation::this_op->sched_.post(std::forward<Fn>(fn), std::move(id));
 }
 
 inline void execute(intptr_t op_ptr) {

@@ -51,7 +51,7 @@ int work() {
     std::vector<future_ptr<int>> futures;
     auto count = int_dist(gen);
     for (int i = 0; i < count; ++i) {
-      futures.push_back(call(work));
+      futures.push_back(ctx_call(work));
     }
 
     int result = 0;
@@ -92,7 +92,7 @@ struct controller {
   }
 
   void submit_work() {
-    open_.push(call(work));
+    open_.push(ctx_call(work));
     ++submitted_;
   }
 
@@ -121,7 +121,7 @@ int main() {
   controller c;
 
   scheduler sched;
-  sched.enqueue_initial(std::bind(&controller::run, &c));
+  sched.enqueue(std::bind(&controller::run, &c), op_id("?", "?"));
 
   std::vector<boost::thread> threads(kWorkerCount);
   for (int i = 0; i < kWorkerCount; ++i) {
