@@ -9,18 +9,21 @@
 
 #include "boost/thread/thread.hpp"
 
-#include "ctx/future.h"
-#include "ctx/operation.h"
-#include "ctx/scheduler.h"
+#include "ctx/ctx.h"
+
+using namespace ctx;
+using namespace std::chrono_literals;
+using sys_clock = std::chrono::system_clock;
+
+struct simple_data {
+  void on_resume(op_id) {}
+  void on_finish(op_id) {}
+  void on_suspend(op_id, op_id) {}
+};
 
 constexpr auto kDesiredWorkload = 100;
 constexpr auto kWorkerCount = 8;
-
-using namespace std::chrono_literals;
 constexpr auto kRunTime = 10s;
-
-using namespace ctx;
-using sys_clock = std::chrono::system_clock;
 
 std::random_device rd;
 std::mt19937 gen(rd());
@@ -48,10 +51,10 @@ int work() {
   }
 
   if (branch_dist(gen)) {
-    std::vector<future_ptr<int>> futures;
+    std::vector<future_ptr<simple_data, int>> futures;
     auto count = int_dist(gen);
     for (int i = 0; i < count; ++i) {
-      futures.push_back(ctx_call(work));
+      futures.push_back(ctx_call(simple_data(), work));
     }
 
     int result = 0;
@@ -92,7 +95,7 @@ struct controller {
   }
 
   void submit_work() {
-    open_.push(ctx_call(work));
+    open_.push(ctx_call(simple_data(), work));
     ++submitted_;
   }
 
@@ -107,7 +110,7 @@ struct controller {
     }
   }
 
-  std::queue<future_ptr<int>> open_;
+  std::queue<future_ptr<simple_data, int>> open_;
 
   sys_clock::time_point end_time_;
   unsigned long submitted_ = 0;
@@ -120,8 +123,9 @@ int main() {
   auto start_time = sys_clock::now();
   controller c;
 
-  scheduler sched;
-  sched.enqueue(std::bind(&controller::run, &c), op_id("?", "?"));
+  scheduler<simple_data> sched;
+  sched.enqueue(simple_data(), std::bind(&controller::run, &c),
+                op_id("?", "?"));
 
   std::vector<boost::thread> threads(kWorkerCount);
   for (int i = 0; i < kWorkerCount; ++i) {

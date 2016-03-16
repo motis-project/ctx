@@ -9,12 +9,11 @@
 
 namespace ctx {
 
-template <typename Data, typename T, typename Enable = void>
+template <typename T, typename Enable = void>
 struct future {};
 
 template <typename Data, typename T>
-struct future<Data, T,
-              typename std::enable_if<!std::is_same<T, void>::value>::type> {
+struct future<T, typename std::enable_if<!std::is_same<T, void>::value>::type> {
   future() : result_available_(false) {}
 
   T& val() {
@@ -49,8 +48,7 @@ struct future<Data, T,
 };
 
 template <typename Data, typename T>
-struct future<Data, T,
-              typename std::enable_if<std::is_same<T, void>::value>::type> {
+struct future<T, typename std::enable_if<std::is_same<T, void>::value>::type> {
   future() : result_available_(false) {}
 
   void get() {
@@ -80,7 +78,7 @@ struct future<Data, T,
   bool result_available_;
 };
 
-template <typename Data, typename T>
-using future_ptr = std::shared_ptr<future<Data, T>>;
+template <typename T>
+using future_ptr = std::shared_ptr<future<T>>;
 
 }  // namespace ctx

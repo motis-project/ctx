@@ -29,7 +29,7 @@ file(GLOB_RECURSE example_files example/*.cc)
 foreach(example_file ${example_files})
   get_filename_component(example ${example_file} NAME_WE)
   add_executable(${example} EXCLUDE_FROM_ALL ${example_file})
-  target_link_libraries(${example} ctx)
+  target_link_libraries(${example} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
   set_target_properties(${example} PROPERTIES COMPILE_FLAGS "-std=c++1y -Wall -Wextra")
 
   list(APPEND example-targets ${example})
