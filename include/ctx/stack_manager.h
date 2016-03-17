@@ -10,7 +10,7 @@
 
 namespace ctx {
 
-constexpr auto kStackSize = 8 * 1024;
+constexpr auto kStackSize = 16 * 1024;
 
 struct stack_handle {
   stack_handle() : stack(nullptr) {}
