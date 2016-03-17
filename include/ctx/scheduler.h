@@ -25,7 +25,7 @@ struct scheduler {
 
   void enqueue(Data data, std::function<void()> fn, op_id id);
 
-  void enqueue(std::shared_ptr<operation<Data>> op);
+  void enqueue(std::shared_ptr<operation<Data>> const& op);
 
   std::atomic<unsigned> next_id_;
   boost::asio::io_service ios_;

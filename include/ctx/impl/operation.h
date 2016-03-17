@@ -20,6 +20,7 @@ template <typename Data>
 operation<Data>::~operation() {
   sched_.stack_manager_.dealloc(stack_);
 }
+
 template <typename Data>
 void operation<Data>::resume() {
   {

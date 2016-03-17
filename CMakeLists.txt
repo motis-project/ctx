@@ -19,11 +19,6 @@ find_package(Threads)
 include_directories(include)
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
-file(GLOB_RECURSE ctx-files src/*)
-add_library(ctx ${ctx-files})
-target_link_libraries(ctx ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-set_target_properties(ctx PROPERTIES COMPILE_FLAGS "-std=c++1y -Wall -Wextra")
-
 set(example-targets "")
 file(GLOB_RECURSE example_files example/*.cc)
 foreach(example_file ${example_files})

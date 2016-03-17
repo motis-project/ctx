@@ -59,7 +59,7 @@ void scheduler<Data>::enqueue(Data data, std::function<void()> fn, op_id id) {
 }
 
 template <typename Data>
-void scheduler<Data>::enqueue(std::shared_ptr<operation<Data>> op) {
+void scheduler<Data>::enqueue(std::shared_ptr<operation<Data>> const& op) {
   ios_.post([op]() { op->resume(); });
 }
 

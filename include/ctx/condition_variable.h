@@ -8,6 +8,9 @@
 namespace ctx {
 
 template <typename Data>
+struct operation;
+
+template <typename Data>
 struct condition_variable {
   condition_variable();
 
