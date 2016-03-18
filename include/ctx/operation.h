@@ -14,20 +14,14 @@
 namespace ctx {
 
 template <typename Data>
-struct operation;
-
-template <typename Data>
-inline void execute(intptr_t op_ptr) {
-  reinterpret_cast<operation<Data>*>(op_ptr)->start();
-}
-
-template <typename Data>
 struct scheduler;
+
+enum class client_state { RUN, WAIT, FIN };
+enum class ctx_state { ENQUEUED, ACTIVE, INACTIVE, FIN };
 
 template <typename Data>
 struct operation : public std::enable_shared_from_this<operation<Data>> {
-  operation(Data data, std::function<void()> fn, scheduler<Data>& sched,
-            op_id id);
+  operation(Data, std::function<void()>, scheduler<Data>&, op_id);
   ~operation();
 
   void resume();
@@ -52,6 +46,33 @@ struct operation : public std::enable_shared_from_this<operation<Data>> {
   bool finished_;
 };
 
+template <typename Data>
+inline void execute(intptr_t op_ptr) {
+  reinterpret_cast<operation<Data>*>(op_ptr)->start();
+}
+
 static thread_local void* this_op;
+
+template <typename T>
+T& maybe_deref(T& x) {
+  return x;
+}
+
+template <typename T>
+T& maybe_deref(T* x) {
+  return *x;
+}
+
+template <typename Data>
+void on_this_op_suspend(op_id const& callee) {
+  auto& current_op = *reinterpret_cast<operation<Data>*>(this_op);
+  maybe_deref(current_op.data_).on_suspend(current_op.id_, callee);
+}
+
+template <typename Data>
+void on_this_op_resume() {
+  auto& current_op = *reinterpret_cast<operation<Data>*>(this_op);
+  maybe_deref(current_op.data_).on_resume(current_op.id_);
+}
 
 }  // namespace ctx

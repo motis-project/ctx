@@ -6,6 +6,7 @@
 #include <atomic>
 
 #include "ctx/condition_variable.h"
+#include "ctx/op_id.h"
 
 namespace ctx {
 
@@ -15,16 +16,17 @@ struct future {};
 template <typename Data, typename T>
 struct future<Data, T,
               typename std::enable_if<!std::is_same<T, void>::value>::type> {
-  future() : result_available_(false) {}
+  future(op_id callee) : callee_(std::move(callee)), result_available_(false) {}
 
   T& val() {
+    on_this_op_suspend<Data>(callee_);
     std::unique_lock<std::mutex> lock(mutex_);
     cv_.wait(lock, [&]() { return result_available_; });
+    on_this_op_resume<Data>();
     if (exception_) {
       std::rethrow_exception(exception_);
-    } else {
-      return result_;
     }
+    return result_;
   }
 
   void set(T&& result) {
@@ -42,6 +44,7 @@ struct future<Data, T,
   }
 
   T result_;
+  op_id callee_;
   std::exception_ptr exception_;
   std::mutex mutex_;
   condition_variable<Data> cv_;
@@ -51,11 +54,13 @@ struct future<Data, T,
 template <typename Data, typename T>
 struct future<Data, T,
               typename std::enable_if<std::is_same<T, void>::value>::type> {
-  future() : result_available_(false) {}
+  future(op_id callee) : callee_(std::move(callee)), result_available_(false) {}
 
   void get() {
+    on_this_op_suspend<Data>(callee_);
     std::unique_lock<std::mutex> lock(mutex_);
     cv_.wait(lock, [&]() { return result_available_; });
+    on_this_op_resume<Data>();
     if (exception_) {
       std::rethrow_exception(exception_);
     }
@@ -74,6 +79,7 @@ struct future<Data, T,
     cv_.notify();
   }
 
+  op_id callee_;
   std::exception_ptr exception_;
   std::mutex mutex_;
   condition_variable<Data> cv_;

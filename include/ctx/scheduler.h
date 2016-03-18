@@ -17,6 +17,8 @@ struct scheduler {
   scheduler(scheduler const&) = delete;
   scheduler& operator=(scheduler const&) = delete;
 
+  unsigned next_op_id() { return ++next_id_; }
+
   template <typename Fn>
   auto post(Data data, Fn fn, op_id id);
 

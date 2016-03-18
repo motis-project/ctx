@@ -125,7 +125,7 @@ int main() {
 
   scheduler<simple_data> sched;
   sched.enqueue(simple_data(), std::bind(&controller::run, &c),
-                op_id("?", "?"));
+                op_id("?", "?", 0));
 
   std::vector<boost::thread> threads(kWorkerCount);
   for (int i = 0; i < kWorkerCount; ++i) {

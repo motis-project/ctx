@@ -74,7 +74,7 @@ int main() {
   scheduler<simple_data> sched;
   for (int i = 0; i < kCount; ++i) {
     sched.enqueue(simple_data(), std::bind(check, i, expected[i]),
-                  op_id("?", "?"));
+                  op_id("?", "?", 0));
   }
 
   int worker_count = 8;
