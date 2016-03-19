@@ -4,14 +4,12 @@
 #include "boost/thread/thread.hpp"
 
 #include "ctx/ctx.h"
+#include "ctx/op_tracker.h"
 
 using namespace ctx;
 
-struct simple_data {
-  void on_resume(op_id) {}
-  void on_finish(op_id) {}
-  void on_suspend(op_id, op_id) {}
-};
+op_tracker t;
+typedef scheduler<op_tracker*> scheduler_t;
 
 int iterfib(int count) {
   if (count == 0) {
@@ -48,13 +46,15 @@ int recfib_async(int i) {
     return recfib_sync(i);
   }
 
-  auto res_1 = ctx_call(simple_data(), std::bind(recfib_async, i - 1));
-  auto res_2 = ctx_call(simple_data(), std::bind(recfib_async, i - 2));
+  auto res_1 = ctx_call(&t, std::bind(recfib_async, i - 1));
+  auto res_2 = ctx_call(&t, std::bind(recfib_async, i - 2));
   return res_1->val() + res_2->val();
 }
 
 void check(int n, int expected) {
-  auto actual = ctx_call(simple_data(), std::bind(recfib_async, n))->val();
+  auto actual = ctx_call(&t, std::bind(recfib_async, n))->val();
+
+  t.print_status();
 
   if (actual == expected) {
     printf("fib result matched %d: %d\n", n, expected);
@@ -71,10 +71,9 @@ int main() {
     expected.push_back(iterfib(i));
   }
 
-  scheduler<simple_data> sched;
+  scheduler_t sched;
   for (int i = 0; i < kCount; ++i) {
-    sched.enqueue(simple_data(), std::bind(check, i, expected[i]),
-                  op_id("?", "?", 0));
+    sched.enqueue(&t, std::bind(check, i, expected[i]), op_id("?", "?", 0));
   }
 
   int worker_count = 8;

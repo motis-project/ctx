@@ -5,6 +5,16 @@
 
 namespace ctx {
 
+template <typename T>
+T& maybe_deref(T& x) {
+  return x;
+}
+
+template <typename T>
+T& maybe_deref(T* x) {
+  return *x;
+}
+
 template <typename Data>
 operation<Data>::operation(Data data, std::function<void()> fn,
                            scheduler<Data>& sched, op_id id)
@@ -19,6 +29,11 @@ operation<Data>::operation(Data data, std::function<void()> fn,
 template <typename Data>
 operation<Data>::~operation() {
   sched_.stack_manager_.dealloc(stack_);
+}
+
+template <typename Data>
+void operation<Data>::on_transition(transition t, op_id const& callee) {
+  maybe_deref(data_).transition(t, id_, callee);
 }
 
 template <typename Data>
@@ -40,7 +55,7 @@ void operation<Data>::resume() {
   }
 
   this_op = this;
-  data_.on_resume(id_);
+  on_transition(transition::ACTIVATE);
   auto finished =
       boost::context::jump_fcontext(&main_ctx_, op_ctx_, me(), false);
 
@@ -57,7 +72,7 @@ void operation<Data>::resume() {
 
 template <typename Data>
 void operation<Data>::suspend(bool finished) {
-  finished ? data_.on_finish(id_) : data_.on_suspend(id_, id_);
+  on_transition(finished ? transition::FIN : transition::DEACTIVATE);
   std::shared_ptr<operation<Data>> self =
       finished ? nullptr : this->shared_from_this();
   boost::context::jump_fcontext(&op_ctx_, main_ctx_, finished, false);

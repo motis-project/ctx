@@ -5,6 +5,7 @@
 #include <mutex>
 #include <atomic>
 
+#include "ctx/operation.h"
 #include "ctx/condition_variable.h"
 #include "ctx/op_id.h"
 
@@ -19,10 +20,10 @@ struct future<Data, T,
   future(op_id callee) : callee_(std::move(callee)), result_available_(false) {}
 
   T& val() {
-    on_this_op_suspend<Data>(callee_);
+    current_op<Data>().on_transition(transition::SUSPEND, callee_);
     std::unique_lock<std::mutex> lock(mutex_);
     cv_.wait(lock, [&]() { return result_available_; });
-    on_this_op_resume<Data>();
+    current_op<Data>().on_transition(transition::RESUME);
     if (exception_) {
       std::rethrow_exception(exception_);
     }
@@ -57,10 +58,10 @@ struct future<Data, T,
   future(op_id callee) : callee_(std::move(callee)), result_available_(false) {}
 
   void get() {
-    on_this_op_suspend<Data>(callee_);
+    current_op<Data>().on_transition(transition::SUSPEND, callee_);
     std::unique_lock<std::mutex> lock(mutex_);
     cv_.wait(lock, [&]() { return result_available_; });
-    on_this_op_resume<Data>();
+    current_op<Data>().on_transition(transition::RESUME);
     if (exception_) {
       std::rethrow_exception(exception_);
     }

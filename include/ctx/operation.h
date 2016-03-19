@@ -16,14 +16,14 @@ namespace ctx {
 template <typename Data>
 struct scheduler;
 
-enum class client_state { RUN, WAIT, FIN };
-enum class ctx_state { ENQUEUED, ACTIVE, INACTIVE, FIN };
+enum class transition { RESUME, SUSPEND, ENQUEUE, ACTIVATE, DEACTIVATE, FIN };
 
 template <typename Data>
 struct operation : public std::enable_shared_from_this<operation<Data>> {
   operation(Data, std::function<void()>, scheduler<Data>&, op_id);
   ~operation();
 
+  void on_transition(transition t, op_id const& id = op_id());
   void resume();
   void suspend(bool finished);
   void start();
@@ -51,28 +51,11 @@ inline void execute(intptr_t op_ptr) {
   reinterpret_cast<operation<Data>*>(op_ptr)->start();
 }
 
-static thread_local void* this_op;
-
-template <typename T>
-T& maybe_deref(T& x) {
-  return x;
-}
-
-template <typename T>
-T& maybe_deref(T* x) {
-  return *x;
-}
+static __thread void* this_op;
 
 template <typename Data>
-void on_this_op_suspend(op_id const& callee) {
-  auto& current_op = *reinterpret_cast<operation<Data>*>(this_op);
-  maybe_deref(current_op.data_).on_suspend(current_op.id_, callee);
-}
-
-template <typename Data>
-void on_this_op_resume() {
-  auto& current_op = *reinterpret_cast<operation<Data>*>(this_op);
-  maybe_deref(current_op.data_).on_resume(current_op.id_);
+operation<Data>& current_op() {
+  return *reinterpret_cast<operation<Data>*>(this_op);
 }
 
 }  // namespace ctx

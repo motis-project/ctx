@@ -16,9 +16,7 @@ using namespace std::chrono_literals;
 using sys_clock = std::chrono::system_clock;
 
 struct simple_data {
-  void on_resume(op_id) {}
-  void on_finish(op_id) {}
-  void on_suspend(op_id, op_id) {}
+  void transition(transition, op_id, op_id) {}
 };
 
 constexpr auto kDesiredWorkload = 100;
