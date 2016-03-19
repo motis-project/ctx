@@ -15,6 +15,16 @@ T& maybe_deref(T* x) {
   return *x;
 }
 
+template <typename T>
+bool is_null(T&) {
+  return false;
+}
+
+template <typename T>
+bool is_null(T* x) {
+  return x == nullptr;
+}
+
 template <typename Data>
 operation<Data>::operation(Data data, std::function<void()> fn,
                            scheduler<Data>& sched, op_id id)
@@ -33,7 +43,9 @@ operation<Data>::~operation() {
 
 template <typename Data>
 void operation<Data>::on_transition(transition t, op_id const& callee) {
-  maybe_deref(data_).transition(t, id_, callee);
+  if (!is_null(data_)) {
+    maybe_deref(data_).transition(t, id_, callee);
+  }
 }
 
 template <typename Data>
