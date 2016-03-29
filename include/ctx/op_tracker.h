@@ -14,6 +14,9 @@ struct op_tracker {
   static constexpr auto kMaxQueueSize = 16384;
 
   struct state {
+    enum class client_state { NONE, RUN, WAIT };
+    enum class ctx_state { NONE, QUEUED, ACTIVE, INACTIVE };
+
     state() : c_state(client_state::RUN), op_state(ctx_state::QUEUED) {}
 
     void transition(transition t, op_id const& callee) {
@@ -52,8 +55,8 @@ struct op_tracker {
     }
 
     op_id callee_;
-    enum class client_state { NONE, RUN, WAIT } c_state;
-    enum class ctx_state { NONE, QUEUED, ACTIVE, INACTIVE } op_state;
+    client_state c_state;
+    ctx_state op_state;
   };
 
   op_tracker() : log_(kMaxQueueSize) {}
