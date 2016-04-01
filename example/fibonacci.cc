@@ -1,5 +1,5 @@
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 #include "boost/thread/thread.hpp"
 
@@ -74,7 +74,8 @@ int main() {
   boost::asio::io_service ios;
   scheduler_t sched(ios);
   for (int i = 0; i < kCount; ++i) {
-    sched.enqueue(simple_data(), std::bind(check, i, expected[i]), op_id("?", "?", 0));
+    sched.enqueue(simple_data(), std::bind(check, i, expected[i]),
+                  op_id("?", "?", 0));
   }
 
   int worker_count = 8;
