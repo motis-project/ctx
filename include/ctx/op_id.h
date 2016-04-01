@@ -4,8 +4,10 @@ namespace ctx {
 
 struct op_id {
   op_id() = default;
-  op_id(char const* name, char const* created_at, int parent_index)
-      : name(name),
+  op_id(char const* created_at)
+      : created_at(created_at), parent_index(0), index(0) {}
+  op_id(std::string name, char const* created_at, int parent_index)
+      : name(std::move(name)),
         created_at(created_at),
         parent_index(parent_index),
         index(0) {}
@@ -18,7 +20,7 @@ struct op_id {
     return lhs.index == rhs.index;
   }
 
-  char const* name;
+  std::string name;
   char const* created_at;
   unsigned parent_index;
   unsigned index;

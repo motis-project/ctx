@@ -10,10 +10,6 @@ template <typename Data>
 struct operation;
 
 template <typename Data>
-scheduler<Data>::scheduler()
-    : next_id_(0) {}
-
-template <typename Data>
 template <typename Fn>
 auto scheduler<Data>::post(Data data, Fn fn, op_id id) {
   id.index = ++next_id_;

@@ -70,6 +70,7 @@ void operation<Data>::resume() {
   on_transition(transition::ACTIVATE);
   auto finished =
       boost::context::jump_fcontext(&main_ctx_, op_ctx_, me(), false);
+  this_op = nullptr;
 
   {
     std::lock_guard<std::mutex> lock(state_mutex_);

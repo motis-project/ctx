@@ -13,7 +13,8 @@ namespace ctx {
 
 template <typename Data>
 struct scheduler {
-  scheduler();
+  scheduler(boost::asio::io_service& ios) : next_id_(0), ios_(ios) {}
+
   scheduler(scheduler const&) = delete;
   scheduler& operator=(scheduler const&) = delete;
 
@@ -30,7 +31,7 @@ struct scheduler {
   void enqueue(std::shared_ptr<operation<Data>> const& op);
 
   std::atomic<unsigned> next_id_;
-  boost::asio::io_service ios_;
+  boost::asio::io_service& ios_;
   stack_manager stack_manager_;
 };
 
