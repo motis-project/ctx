@@ -5,7 +5,7 @@
 #include <mutex>
 #include <memory>
 
-#include "boost/context/all.hpp"
+#include "boost/context/fcontext.hpp"
 
 #include "ctx/stack_manager.h"
 #include "ctx/future.h"

@@ -4,12 +4,14 @@
 #include "boost/thread/thread.hpp"
 
 #include "ctx/ctx.h"
-#include "ctx/op_tracker.h"
 
 using namespace ctx;
 
-op_tracker t;
-typedef scheduler<op_tracker*> scheduler_t;
+struct simple_data {
+  void transition(transition, op_id, op_id) {}
+};
+
+typedef scheduler<simple_data> scheduler_t;
 
 int iterfib(int count) {
   if (count == 0) {
@@ -46,15 +48,13 @@ int recfib_async(int i) {
     return recfib_sync(i);
   }
 
-  auto res_1 = ctx_call(&t, std::bind(recfib_async, i - 1));
-  auto res_2 = ctx_call(&t, std::bind(recfib_async, i - 2));
+  auto res_1 = ctx_call(simple_data(), std::bind(recfib_async, i - 1));
+  auto res_2 = ctx_call(simple_data(), std::bind(recfib_async, i - 2));
   return res_1->val() + res_2->val();
 }
 
 void check(int n, int expected) {
-  auto actual = ctx_call(&t, std::bind(recfib_async, n))->val();
-
-  t.print_status();
+  auto actual = ctx_call(simple_data(), std::bind(recfib_async, n))->val();
 
   if (actual == expected) {
     printf("fib result matched %d: %d\n", n, expected);
@@ -71,15 +71,16 @@ int main() {
     expected.push_back(iterfib(i));
   }
 
-  scheduler_t sched;
+  boost::asio::io_service ios;
+  scheduler_t sched(ios);
   for (int i = 0; i < kCount; ++i) {
-    sched.enqueue(&t, std::bind(check, i, expected[i]), op_id("?", "?", 0));
+    sched.enqueue(simple_data(), std::bind(check, i, expected[i]), op_id("?", "?", 0));
   }
 
   int worker_count = 8;
   std::vector<boost::thread> threads(worker_count);
   for (int i = 0; i < worker_count; ++i) {
-    threads[i] = boost::thread([&]() { sched.ios_.run(); });
+    threads[i] = boost::thread([&]() { ios.run(); });
   }
   std::for_each(begin(threads), end(threads),
                 [](boost::thread& t) { t.join(); });

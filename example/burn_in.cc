@@ -121,13 +121,14 @@ int main() {
   auto start_time = sys_clock::now();
   controller c;
 
-  scheduler<simple_data> sched;
+  boost::asio::io_service ios;
+  scheduler<simple_data> sched(ios);
   sched.enqueue(simple_data(), std::bind(&controller::run, &c),
                 op_id("?", "?", 0));
 
   std::vector<boost::thread> threads(kWorkerCount);
   for (int i = 0; i < kWorkerCount; ++i) {
-    threads[i] = boost::thread([&]() { sched.ios_.run(); });
+    threads[i] = boost::thread([&]() { ios.run(); });
   }
   std::for_each(begin(threads), end(threads),
                 [](boost::thread& t) { t.join(); });
