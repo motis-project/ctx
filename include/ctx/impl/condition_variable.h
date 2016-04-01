@@ -5,9 +5,18 @@
 namespace ctx {
 
 template <typename Data>
-condition_variable<Data>::condition_variable()
-    : caller_(reinterpret_cast<operation<Data>*>(this_op)->shared_from_this()) {
+std::weak_ptr<operation<Data>> get_caller() {
+  auto op = reinterpret_cast<operation<Data>*>(this_op);
+  if (op) {
+    return op->shared_from_this();
+  } else {
+    return std::weak_ptr<operation<Data>>();
+  }
 }
+
+template <typename Data>
+condition_variable<Data>::condition_variable()
+    : caller_(get_caller<Data>()) {}
 
 template <typename Data>
 template <typename Predicate>
