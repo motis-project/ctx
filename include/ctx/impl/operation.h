@@ -66,8 +66,8 @@ void operation<Data>::resume() {
     init();
   }
 
-  this_op = this;
   on_transition(transition::ACTIVATE);
+  this_op = this;
   auto finished =
       boost::context::jump_fcontext(&main_ctx_, op_ctx_, me(), false);
   this_op = nullptr;

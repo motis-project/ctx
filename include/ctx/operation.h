@@ -46,12 +46,12 @@ struct operation : public std::enable_shared_from_this<operation<Data>> {
   bool finished_;
 };
 
+extern thread_local void* this_op;
+
 template <typename Data>
 inline void execute(intptr_t op_ptr) {
   reinterpret_cast<operation<Data>*>(op_ptr)->start();
 }
-
-static __thread void* this_op;
 
 template <typename Data>
 operation<Data>& current_op() {

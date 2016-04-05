@@ -50,6 +50,7 @@ auto scheduler<Data>::post_void(Data data, Fn fn, op_id id) {
 
 template <typename Data>
 void scheduler<Data>::enqueue(Data data, std::function<void()> fn, op_id id) {
+  id.index = ++next_id_;
   enqueue(std::make_shared<operation<Data>>(
       std::forward<Data>(data), std::move(fn), *this, std::move(id)));
 }
