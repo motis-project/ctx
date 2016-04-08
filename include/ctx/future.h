@@ -90,4 +90,11 @@ struct future<Data, T,
 template <typename Data, typename T>
 using future_ptr = std::shared_ptr<future<Data, T>>;
 
+template <typename Data, typename T>
+void await_all(std::vector<future_ptr<Data, T>> const& futures) {
+  for(auto const& fut : futures) {
+    fut->val();
+  }
+}
+
 }  // namespace ctx
