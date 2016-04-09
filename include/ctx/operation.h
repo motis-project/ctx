@@ -7,6 +7,7 @@
 
 #include "boost/context/fcontext.hpp"
 
+#include "ctx/thread_local.h"
 #include "ctx/stack_manager.h"
 #include "ctx/future.h"
 #include "ctx/op_id.h"
@@ -46,7 +47,7 @@ struct operation : public std::enable_shared_from_this<operation<Data>> {
   bool finished_;
 };
 
-extern thread_local void* this_op;
+extern CTX_ATTRIBUTE_TLS void* this_op;
 
 template <typename Data>
 inline void execute(intptr_t op_ptr) {

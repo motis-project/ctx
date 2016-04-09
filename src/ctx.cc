@@ -1,5 +1,7 @@
+#include "ctx/thread_local.h"
+
 namespace ctx {
 
-thread_local void* this_op;
+CTX_ATTRIBUTE_TLS void* this_op;
 
 }  // namespace ctx
