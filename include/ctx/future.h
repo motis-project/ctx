@@ -57,7 +57,7 @@ struct future<Data, T,
               typename std::enable_if<std::is_same<T, void>::value>::type> {
   future(op_id callee) : callee_(std::move(callee)), result_available_(false) {}
 
-  void get() {
+  void val() {
     current_op<Data>().on_transition(transition::SUSPEND, callee_);
     std::unique_lock<std::mutex> lock(mutex_);
     cv_.wait(lock, [&]() { return result_available_; });
