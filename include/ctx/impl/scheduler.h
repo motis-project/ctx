@@ -30,7 +30,7 @@ auto scheduler<Data>::post(Data data, Fn fn, op_id id) {
 
 template <typename Data>
 template <typename Fn>
-auto scheduler<Data>::post_void(Data data, Fn fn, op_id id) {
+future_ptr<Data, void>  scheduler<Data>::post_void(Data data, Fn fn, op_id id) {
   id.index = ++next_id_;
   auto f = std::make_shared<future<Data, void>>(id);
   enqueue(std::forward<Data>(data), std::function<void()>([f, fn]() {

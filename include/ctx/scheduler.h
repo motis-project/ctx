@@ -24,7 +24,7 @@ struct scheduler {
   auto post(Data data, Fn fn, op_id id);
 
   template <typename Fn>
-  auto post_void(Data data, Fn fn, op_id id);
+  future_ptr<Data, void> post_void(Data data, Fn fn, op_id id);
 
   void enqueue(Data data, std::function<void()> fn, op_id id);
 
