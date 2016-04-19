@@ -21,7 +21,9 @@ include_directories(${CMAKE_BINARY_DIR}/generated)
 
 add_library(ctx src/ctx.cc)
 target_link_libraries(ctx ${Boost_CONTEXT_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
-set_target_properties(ctx PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
+if (NOT MSVC)
+  set_target_properties(ctx PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
+endif()
 
 set(example-targets "")
 file(GLOB_RECURSE example_files example/*.cc)
