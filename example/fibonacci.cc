@@ -1,7 +1,6 @@
 #include <algorithm>
+#include <thread>
 #include <vector>
-
-#include "boost/thread/thread.hpp"
 
 #include "ctx/ctx.h"
 
@@ -79,10 +78,9 @@ int main() {
   }
 
   int worker_count = 8;
-  std::vector<boost::thread> threads(worker_count);
+  std::vector<std::thread> threads(worker_count);
   for (int i = 0; i < worker_count; ++i) {
-    threads[i] = boost::thread([&]() { ios.run(); });
+    threads[i] = std::thread([&]() { ios.run(); });
   }
-  std::for_each(begin(threads), end(threads),
-                [](boost::thread& t) { t.join(); });
+  std::for_each(begin(threads), end(threads), [](std::thread& t) { t.join(); });
 }

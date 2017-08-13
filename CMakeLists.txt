@@ -16,6 +16,7 @@ configure_file (
 find_package(Boost COMPONENTS system thread context REQUIRED)
 find_package(Threads)
 
+include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 include_directories(include)
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
