@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstdlib>
-#include <vector>
 #include <mutex>
+#include <vector>
 
 #include "ctx_config.h"
 #ifdef CTX_ENABLE_VALGRIND
@@ -11,7 +11,7 @@
 
 namespace ctx {
 
-constexpr auto kStackSize = 128 * 1024;
+constexpr auto kStackSize = 512 * 1024;
 
 struct stack_handle {
   stack_handle() : stack(nullptr) {}
