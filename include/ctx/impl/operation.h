@@ -50,46 +50,43 @@ operation<Data>::~operation() {
 
 #ifdef CTX_ENABLE_ASAN
 template <typename Data>
-void operation<Data>::enter_op_asan_start_switch() {
+void operation<Data>::enter_op_start_switch() {
   __sanitizer_start_switch_fiber(&fake_stack_, stack_.get_allocated_mem(),
                                  kStackSize);
 }
 
 template <typename Data>
-void operation<Data>::enter_op_asan_finish_switch() {
+void operation<Data>::enter_op_finish_switch() {
   __sanitizer_finish_switch_fiber(fake_stack_,
                                   &bottom_old_,  // NOLINT
                                   &size_old_);
 }
 
 template <typename Data>
-void operation<Data>::exit_op_asan_start_switch() {
+void operation<Data>::exit_op_start_switch() {
   __sanitizer_start_switch_fiber(&fake_stack_, bottom_old_, size_old_);
 }
 
 template <typename Data>
-void operation<Data>::exit_op_asan_finish_switch() {
+void operation<Data>::exit_op_finish_switch() {
   __sanitizer_finish_switch_fiber(fake_stack_, nullptr, nullptr);
-}
-
-template <typename Data>
-void operation<Data>::on_transition(transition t, op_id const& callee) {
-  if (!is_null(data_)) {
-    maybe_deref(data_).transition(t, id_, callee);
-  }
 }
 #else
 template <typename Data>
-void operation<Data>::enter_op_start_switch() {}
+void operation<Data>::enter_op_start_switch() {
+}
 
 template <typename Data>
-void operation<Data>::enter_op_finish_switch() {}
+void operation<Data>::enter_op_finish_switch() {
+}
 
 template <typename Data>
-void operation<Data>::exit_op_start_switch() {}
+void operation<Data>::exit_op_start_switch() {
+}
 
 template <typename Data>
-void operation<Data>::exit_op_finish_switch() {}
+void operation<Data>::exit_op_finish_switch() {
+}
 #endif
 
 template <typename Data>
