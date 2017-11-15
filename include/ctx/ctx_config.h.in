@@ -6,4 +6,8 @@ namespace ctx {
 #define CTX_ENABLE_VALGRIND 1
 #endif
 
+#if @CTX_ENABLE_ASAN@
+#define CTX_ENABLE_ASAN 1
+#endif
+
 }  // namespace ctx

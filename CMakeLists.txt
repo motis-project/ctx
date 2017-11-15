@@ -8,6 +8,13 @@ else()
   set(CTX_ENABLE_VALGRIND 0)
 endif()
 
+option(CTX_ASAN "CTX_ASAN" OFF)
+if (${CTX_VALGRIND})
+  set(CTX_ENABLE_ASAN 1)
+else()
+  set(CTX_ENABLE_ASAN 0)
+endif()
+
 configure_file (
   "include/ctx/ctx_config.h.in"
   "${CMAKE_BINARY_DIR}/generated/ctx_config.h"
