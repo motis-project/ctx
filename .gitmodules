@@ -1,3 +1,3 @@
 [submodule "external_lib/deboost.context"]
 	path = external_lib/deboost.context
-	url = https://github.com/septag/deboost.context
+	url = git@git.motis-project.de:lib/deboost.context.git
