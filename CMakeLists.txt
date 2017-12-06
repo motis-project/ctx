@@ -1,6 +1,11 @@
 project(ctx)
 cmake_minimum_required(VERSION 2.8)
 
+add_subdirectory(external_lib/deboost.context)
+
+find_package(Threads)
+find_package(Boost COMPONENTS system thread REQUIRED)
+
 option(CTX_VALGRIND "CTX_VALGRIND" OFF)
 if (${CTX_VALGRIND})
   set(CTX_ENABLE_VALGRIND 1)
@@ -20,15 +25,10 @@ configure_file (
   "${CMAKE_BINARY_DIR}/generated/ctx_config.h"
 )
 
-find_package(Boost COMPONENTS system thread context REQUIRED)
-find_package(Threads)
-
-include_directories(SYSTEM ${Boost_INCLUDE_DIR})
-include_directories(include)
-include_directories(${CMAKE_BINARY_DIR}/generated)
-
 add_library(ctx src/ctx.cc)
-target_link_libraries(ctx ${Boost_CONTEXT_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+target_link_libraries(ctx fcontext ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+target_include_directories(ctx
+  PUBLIC include ${CMAKE_BINARY_DIR}/generated ${Boost_INCLUDE_DIR})
 if (NOT MSVC)
   set_target_properties(ctx PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
 endif()
@@ -38,7 +38,7 @@ file(GLOB_RECURSE example_files example/*.cc)
 foreach(example_file ${example_files})
   get_filename_component(example ${example_file} NAME_WE)
   add_executable(${example} EXCLUDE_FROM_ALL ${example_file})
-  target_link_libraries(${example} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ctx)
+  target_link_libraries(${example} ${CMAKE_THREAD_LIBS_INIT} ctx)
   set_target_properties(${example} PROPERTIES COMPILE_FLAGS "-std=c++1y -Wall -Wextra")
 
   list(APPEND example-targets ${example})

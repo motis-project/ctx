@@ -5,7 +5,7 @@
 #include <memory>
 #include <mutex>
 
-#include "boost/context/fcontext.hpp"
+#include "fcontext/fcontext.h"
 
 #include "ctx/future.h"
 #include "ctx/op_id.h"
@@ -56,8 +56,8 @@ struct operation : public std::enable_shared_from_this<operation<Data>> {
   op_id id_;
 
   stack_handle stack_;
-  boost::context::fcontext_t op_ctx_;
-  boost::context::fcontext_t main_ctx_;
+  fcontext_t op_ctx_;
+  fcontext_t main_ctx_;
 
   scheduler<Data>& sched_;
   std::function<void()> fn_;
@@ -71,9 +71,11 @@ struct operation : public std::enable_shared_from_this<operation<Data>> {
 extern CTX_ATTRIBUTE_TLS void* this_op;
 
 template <typename Data>
-inline void execute(intptr_t op_ptr) {
-  reinterpret_cast<operation<Data>*>(op_ptr)->enter_op_finish_switch();
-  reinterpret_cast<operation<Data>*>(op_ptr)->start();
+inline void execute(fcontext_transfer_t t) {
+  auto const op = reinterpret_cast<operation<Data>*>(t.data);
+  op->enter_op_finish_switch();
+  op->main_ctx_ = t.ctx;
+  op->start();
 }
 
 template <typename Data>

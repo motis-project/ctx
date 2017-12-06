@@ -73,20 +73,16 @@ void operation<Data>::exit_op_finish_switch() {
 }
 #else
 template <typename Data>
-void operation<Data>::enter_op_start_switch() {
-}
+void operation<Data>::enter_op_start_switch() {}
 
 template <typename Data>
-void operation<Data>::enter_op_finish_switch() {
-}
+void operation<Data>::enter_op_finish_switch() {}
 
 template <typename Data>
-void operation<Data>::exit_op_start_switch() {
-}
+void operation<Data>::exit_op_start_switch() {}
 
 template <typename Data>
-void operation<Data>::exit_op_finish_switch() {
-}
+void operation<Data>::exit_op_finish_switch() {}
 #endif
 
 template <typename Data>
@@ -117,10 +113,12 @@ void operation<Data>::resume() {
   on_transition(transition::ACTIVATE);
   this_op = this;
   enter_op_start_switch();
-  auto finished =
-      boost::context::jump_fcontext(&main_ctx_, op_ctx_, me(), false);
+  auto const t = jump_fcontext(op_ctx_, this);
   exit_op_finish_switch();
   this_op = nullptr;
+
+  op_ctx_ = t.ctx;
+  auto const finished = t.data == nullptr;
 
   {
     std::lock_guard<std::mutex> lock(state_mutex_);
@@ -139,8 +137,11 @@ void operation<Data>::suspend(bool finished) {
   std::shared_ptr<operation<Data>> self =
       finished ? nullptr : this->shared_from_this();
   exit_op_start_switch();
-  boost::context::jump_fcontext(&op_ctx_, main_ctx_, finished, false);
+  auto const t =
+      jump_fcontext(main_ctx_, finished ? nullptr : reinterpret_cast<void*>(1));
   enter_op_finish_switch();
+
+  main_ctx_ = t.ctx;
 }
 
 template <typename Data>
@@ -152,13 +153,7 @@ void operation<Data>::start() {
 template <typename Data>
 void operation<Data>::init() {
   stack_ = sched_.stack_manager_.alloc();
-  op_ctx_ = boost::context::make_fcontext(stack_.get_stack(), kStackSize,
-                                          execute<Data>);
-}
-
-template <typename Data>
-intptr_t operation<Data>::me() const {
-  return reinterpret_cast<intptr_t>(this);
+  op_ctx_ = make_fcontext(stack_.get_stack(), kStackSize, execute<Data>);
 }
 
 }  // namespace ctx

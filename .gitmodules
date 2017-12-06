@@ -1,0 +1,3 @@
+[submodule "external_lib/deboost.context"]
+	path = external_lib/deboost.context
+	url = https://github.com/septag/deboost.context
