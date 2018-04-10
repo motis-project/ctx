@@ -7,7 +7,7 @@ namespace ctx {
 struct op_id {
   op_id() = default;
   op_id(char const* created_at)
-      : created_at(created_at), parent_index(0), index(0) {}
+      : name(created_at), created_at(created_at), parent_index(0), index(0) {}
   op_id(std::string name, char const* created_at, int parent_index)
       : name(std::move(name)),
         created_at(created_at),

@@ -1,13 +1,12 @@
 #pragma once
 
-#include <type_traits>
-#include <exception>
-#include <mutex>
 #include <atomic>
+#include <exception>
+#include <type_traits>
 
-#include "ctx/operation.h"
 #include "ctx/condition_variable.h"
 #include "ctx/op_id.h"
+#include "ctx/operation.h"
 
 namespace ctx {
 
@@ -21,8 +20,7 @@ struct future<Data, T,
 
   T& val() {
     current_op<Data>().on_transition(transition::SUSPEND, callee_);
-    std::unique_lock<std::mutex> lock(mutex_);
-    cv_.wait(lock, [&]() { return result_available_; });
+    cv_.wait([&]() { return result_available_.load(); });
     current_op<Data>().on_transition(transition::RESUME);
     if (exception_) {
       std::rethrow_exception(exception_);
@@ -31,25 +29,22 @@ struct future<Data, T,
   }
 
   void set(T&& result) {
-    std::lock_guard<std::mutex> lock(mutex_);
     result_ = std::move(result);
-    result_available_ = true;
+    result_available_.store(true);
     cv_.notify();
   }
 
   void set(std::exception_ptr e) {
-    std::lock_guard<std::mutex> lock(mutex_);
     exception_ = e;
-    result_available_ = true;
+    result_available_.store(true);
     cv_.notify();
   }
 
   T result_;
   op_id callee_;
   std::exception_ptr exception_;
-  std::mutex mutex_;
   condition_variable<Data> cv_;
-  bool result_available_;
+  std::atomic_bool result_available_;
 };
 
 template <typename Data, typename T>
@@ -59,8 +54,7 @@ struct future<Data, T,
 
   void val() {
     current_op<Data>().on_transition(transition::SUSPEND, callee_);
-    std::unique_lock<std::mutex> lock(mutex_);
-    cv_.wait(lock, [&]() { return result_available_; });
+    cv_.wait([&]() { return result_available_.load(); });
     current_op<Data>().on_transition(transition::RESUME);
     if (exception_) {
       std::rethrow_exception(exception_);
@@ -68,23 +62,20 @@ struct future<Data, T,
   }
 
   void set() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    result_available_ = true;
+    result_available_.store(true);
     cv_.notify();
   }
 
   void set(std::exception_ptr e) {
-    std::lock_guard<std::mutex> lock(mutex_);
     exception_ = e;
-    result_available_ = true;
+    result_available_.store(true);
     cv_.notify();
   }
 
   op_id callee_;
   std::exception_ptr exception_;
-  std::mutex mutex_;
   condition_variable<Data> cv_;
-  bool result_available_;
+  std::atomic_bool result_available_;
 };
 
 template <typename Data, typename T>
@@ -92,7 +83,7 @@ using future_ptr = std::shared_ptr<future<Data, T>>;
 
 template <typename Data, typename T>
 void await_all(std::vector<future_ptr<Data, T>> const& futures) {
-  for(auto const& fut : futures) {
+  for (auto const& fut : futures) {
     fut->val();
   }
 }

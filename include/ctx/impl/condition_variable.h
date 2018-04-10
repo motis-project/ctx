@@ -20,12 +20,9 @@ condition_variable<Data>::condition_variable()
 
 template <typename Data>
 template <typename Predicate>
-void condition_variable<Data>::wait(std::unique_lock<std::mutex>& lock,
-                                    Predicate pred) {
+void condition_variable<Data>::wait(Predicate pred) {
   while (!pred()) {
-    lock.unlock();
     wait();
-    lock.lock();
   }
 }
 

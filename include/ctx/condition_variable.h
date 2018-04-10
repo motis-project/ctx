@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <mutex>
 
 #include "ctx/operation.h"
 
@@ -15,7 +14,7 @@ struct condition_variable {
   condition_variable();
 
   template <typename Predicate>
-  void wait(std::unique_lock<std::mutex>& lock, Predicate pred);
+  void wait(Predicate pred);
 
   void wait();
   void notify();

@@ -52,8 +52,8 @@ struct operation : public std::enable_shared_from_this<operation<Data>> {
   size_t size_old_;
 #endif
 
-  Data data_;
   op_id id_;
+  Data data_;
 
   stack_handle stack_;
   fcontext_t op_ctx_;
