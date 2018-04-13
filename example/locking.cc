@@ -21,7 +21,7 @@ struct controller {
     controller& ctrl_;
   };
 
-  controller(boost::asio::io_service& ios) : scheduler_{ios} {};
+  explicit controller(boost::asio::io_service& ios) : scheduler_{ios} {};
 
   void start_read() {
     std::unique_lock<std::mutex> l{lock_, std::defer_lock_t{}};
