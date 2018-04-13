@@ -26,7 +26,7 @@ struct controller {
   void start_read() {
     std::unique_lock<std::mutex> l{lock_, std::defer_lock_t{}};
 
-  aquire:
+  aquire:  // while loop not suitable because condition needs to be locked, to
     l.lock();
     if (write_active_) {
       auto& op = current_op<controller*>();
@@ -52,7 +52,7 @@ struct controller {
   void start_write() {
     std::unique_lock<std::mutex> l{lock_, std::defer_lock_t{}};
 
-  aquire:
+  aquire:  // while loop not suitable because condition needs to be locked, too
     l.lock();
     if (write_active_ || read_count_ != 0) {
       auto& op = current_op<controller*>();
