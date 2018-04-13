@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -7,39 +8,76 @@
 using namespace ctx;
 
 struct controller {
-
   struct read {
-    read() {
-      std::unique_lock<std::mutex> l{lock_};
-      if (write_active_) {
-        auto& op = current_op();
-        read_queue_.emplace_back(op.shared_from_this());
-        l.unlock();
-        op.suspend(/*finish = */ false);
-      } else {
-        ++read_count_;
-      }
-    }
-
-    ~read() {
-      std::unique_lock<std::mutex> l{lock_};
-      --read_count_;
-      if (read_count_ == 0 && !write_queue_.empty()) {
-        auto const w_op = write_queue_.front();
-        write_queue_.erase(begin(write_queue_));
-        scheduler_.enqueue(w_op);
-      }
-      if (!read_queue_.empty()) {
-        auto const r_op = read_queue_.front();
-        read_queue_.erase(begin(write_queue_));
-        scheduler_.enqueue(r_op);
-      }
-    }
+    explicit read(controller& ctrl) : ctrl_{ctrl} { ctrl_.start_read(); }
+    ~read() { ctrl_.end_read(); }
+    controller& ctrl_;
   };
+
+  struct write {
+    explicit write(controller& ctrl) : ctrl_{ctrl} { ctrl_.start_write(); }
+    ~write() { ctrl_.end_write(); }
+    controller& ctrl_;
+  };
+
+  void start_read() {
+    std::unique_lock<std::mutex> l{lock_};
+    if (write_active_) {
+      auto& op = current_op<controller*>();
+      read_queue_.emplace_back(op.shared_from_this());
+      l.unlock();
+      op.suspend(/*finish = */ false);
+    } else {
+      ++read_count_;
+    }
+  }
+
+  void end_read() {
+    std::unique_lock<std::mutex> l{lock_};
+    --read_count_;
+    if (read_count_ == 0 && !write_queue_.empty()) {
+      unqueue(write_queue_);
+    } else if (!read_queue_.empty()) {
+      unqueue(read_queue_);
+    }
+  }
+
+  void start_write() {
+    std::unique_lock<std::mutex> l{lock_};
+    if (write_active_ || read_count_ != 0) {
+      auto& op = current_op<controller*>();
+      read_queue_.emplace_back(op.shared_from_this());
+      l.unlock();
+      op.suspend(/*finish = */ false);
+    } else {
+      write_active_ = true;
+    }
+  }
+
+  void end_write() {
+    std::unique_lock<std::mutex> l{lock_};
+    write_active_ = false;
+    if (!write_queue_.empty()) {
+      unqueue(write_queue_);
+    } else if (!read_queue_.empty()) {
+      unqueue(read_queue_);
+    }
+  }
 
   void unqueue(std::vector<std::shared_ptr<operation<controller*>>>& queue) {
     scheduler_.enqueue(queue.front());
     queue.erase(begin(queue));
+  }
+
+  void transition(transition, op_id, op_id) {}
+
+  template <typename Fn>
+  void enqueue_read(Fn&& fn, op_id id) {
+    enqueue(this,
+            []() {
+
+            },
+            id);
   }
 
   scheduler<controller*> scheduler_;
@@ -50,78 +88,39 @@ struct controller {
   bool write_active_ = false;
 };
 
-struct simple_data {
-  void transition(transition, op_id, op_id) {}
-};
-
-typedef scheduler<simple_data> scheduler_t;
-
-int iterfib(int count) {
-  if (count == 0) {
-    return 0;
-  }
-  if (count == 1) {
-    return 1;
-  }
-
-  int i = 0;
-  int j = 1;
-
-  for (int c = 0; c < count - 1; ++c) {
-    int tmp = j;
-    j = i + j;
-    i = tmp;
-  }
-  return j;
-}
-
-int recfib_sync(int i) {
-  if (i == 0) {
-    return 0;
-  }
-  if (i == 1) {
-    return 1;
-  }
-
-  return recfib_sync(i - 1) + recfib_sync(i - 2);
-}
-
-int recfib_async(int i) {
-  if (i < 20) {
-    return recfib_sync(i);
-  }
-
-  auto res_1 = ctx_call(simple_data(), std::bind(recfib_async, i - 1));
-  auto res_2 = ctx_call(simple_data(), std::bind(recfib_async, i - 2));
-  return res_1->val() + res_2->val();
-}
-
-void check(int n, int expected) {
-  auto actual = ctx_call(simple_data(), std::bind(recfib_async, n))->val();
-
-  if (actual == expected) {
-    printf("fib result matched %d: %d\n", n, expected);
-  } else {
-    printf("fib result did not match %d: %d != %d\n", n, actual, expected);
-  }
-}
-
 int main() {
-  constexpr auto kCount = 40;
+  std::vector<int> data;
 
-  std::vector<int> expected;
-  for (int i = 0; i < kCount; ++i) {
-    expected.push_back(iterfib(i));
-  }
+  auto const read_op = [&data]() {
+    int sum = 0;
+    for (auto const& d : data) {
+      sum += d;
+    }
+    printf("%d\n", sum);
+  };
+
+  auto const write_op = [&data]() {
+    int sum = 0;
+    for (auto const& d : data) {
+      sum += d;
+    }
+    data.emplace_back(sum);
+  };
 
   boost::asio::io_service ios;
-  scheduler_t sched(ios);
-  for (int i = 0; i < kCount; ++i) {
-    sched.enqueue(simple_data(), std::bind(check, i, expected[i]),
-                  op_id("?", "?", 0));
+  controller c(ios);
+  for (int i = 0; i < 10000; ++i) {
+    c.enqueue(read_op, op_id("read", "?", 0));
+    c.enqueue(read_op, op_id("read", "?", 0));
+    c.enqueue(read_op, op_id("read", "?", 0));
+    c.enqueue(read_op, op_id("read", "?", 0));
+    c.enqueue(read_op, op_id("read", "?", 0));
+    c.enqueue(read_op, op_id("read", "?", 0));
+    c.enqueue(read_op, op_id("read", "?", 0));
+    c.enqueue(write_op, op_id("write", "?", 0));
   }
 
-  int worker_count = 8;
+  constexpr auto const worker_count = 8;
   std::vector<std::thread> threads(worker_count);
   for (int i = 0; i < worker_count; ++i) {
     threads[i] = std::thread([&]() { ios.run(); });
