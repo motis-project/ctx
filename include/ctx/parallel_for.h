@@ -9,8 +9,8 @@ namespace ctx {
 
 template <typename Data, typename T, typename Fn>
 void parallel_for(T& vec, Fn fn, ctx::op_id id) {
-  ctx::operation<Data>& op = ctx::current_op<Data>();
-  id.parent_index = op.id_.index;
+  auto const op = ctx::current_op<Data>();
+  id.parent_index = op->id_.index;
 
   std::atomic_bool has_execption{false};
   std::exception_ptr exception;
@@ -23,7 +23,7 @@ void parallel_for(T& vec, Fn fn, ctx::op_id id) {
       }
       fn(elem);
     };
-    futures.push_back(op.sched_.post_void(op.data_, wrapped, id));
+    futures.push_back(op->sched_.post_void(op->data_, wrapped, id));
   }
 
   for (auto const& fut : futures) {
