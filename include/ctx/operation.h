@@ -79,8 +79,8 @@ inline void execute(fcontext_transfer_t t) {
 }
 
 template <typename Data>
-operation<Data>& current_op() {
-  return *reinterpret_cast<operation<Data>*>(this_op);
+operation<Data>* current_op() {
+  return reinterpret_cast<operation<Data>*>(this_op);
 }
 
 }  // namespace ctx

@@ -35,10 +35,10 @@ struct access_scheduler : public scheduler<Data> {
   aquire:  // while loop not suitable because condition needs to be locked, to
     l.lock();
     if (write_active_) {
-      auto& op = current_op<Data>();
-      read_queue_.emplace_back(op.shared_from_this());
+      auto const op = current_op<Data>();
+      read_queue_.emplace_back(op->shared_from_this());
       l.unlock();
-      op.suspend(/*finish = */ false);
+      op->suspend(/*finish = */ false);
       goto aquire;
     }
 
@@ -61,10 +61,10 @@ struct access_scheduler : public scheduler<Data> {
   aquire:  // while loop not suitable because condition needs to be locked, too
     l.lock();
     if (write_active_ || read_count_ != 0) {
-      auto& op = current_op<Data>();
-      read_queue_.emplace_back(op.shared_from_this());
+      auto const op = current_op<Data>();
+      read_queue_.emplace_back(op->shared_from_this());
       l.unlock();
-      op.suspend(/*finish = */ false);
+      op->suspend(/*finish = */ false);
       goto aquire;
     }
 
@@ -91,7 +91,7 @@ struct access_scheduler : public scheduler<Data> {
     this->enqueue(d,
                   [fn, this]() {
                     read r{*this};
-                    fn();
+                    return fn();
                   },
                   id);
   }
@@ -101,9 +101,49 @@ struct access_scheduler : public scheduler<Data> {
     this->enqueue(d,
                   [fn, this]() {
                     write r{*this};
-                    fn();
+                    return fn();
                   },
                   id);
+  }
+
+  template <typename Fn>
+  auto post_read(Data d, Fn&& fn, op_id id) {
+    return scheduler<Data>::post(d,
+                                 [fn, this]() {
+                                   read r{*this};
+                                   return fn();
+                                 },
+                                 id);
+  }
+
+  template <typename Fn>
+  auto post_void_read(Data d, Fn&& fn, op_id id) {
+    return scheduler<Data>::post(d,
+                                 [fn, this]() {
+                                   read r{*this};
+                                   return fn();
+                                 },
+                                 id);
+  }
+
+  template <typename Fn>
+  auto post_write(Data d, Fn&& fn, op_id id) {
+    return scheduler<Data>::post(d,
+                                 [fn, this]() {
+                                   write r{*this};
+                                   return fn();
+                                 },
+                                 id);
+  }
+
+  template <typename Fn>
+  auto post_void_write(Data d, Fn&& fn, op_id id) {
+    return scheduler<Data>::post(d,
+                                 [fn, this]() {
+                                   write r{*this};
+                                   return fn();
+                                 },
+                                 id);
   }
 
   std::mutex lock_;

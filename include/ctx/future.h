@@ -19,9 +19,9 @@ struct future<Data, T,
   future(op_id callee) : callee_(std::move(callee)), result_available_(false) {}
 
   T& val() {
-    current_op<Data>().on_transition(transition::SUSPEND, callee_);
+    current_op<Data>()->on_transition(transition::SUSPEND, callee_);
     cv_.wait([&]() { return result_available_.load(); });
-    current_op<Data>().on_transition(transition::RESUME);
+    current_op<Data>()->on_transition(transition::RESUME);
     if (exception_) {
       std::rethrow_exception(exception_);
     }
@@ -53,9 +53,9 @@ struct future<Data, T,
   future(op_id callee) : callee_(std::move(callee)), result_available_(false) {}
 
   void val() {
-    current_op<Data>().on_transition(transition::SUSPEND, callee_);
+    current_op<Data>()->on_transition(transition::SUSPEND, callee_);
     cv_.wait([&]() { return result_available_.load(); });
-    current_op<Data>().on_transition(transition::RESUME);
+    current_op<Data>()->on_transition(transition::RESUME);
     if (exception_) {
       std::rethrow_exception(exception_);
     }
