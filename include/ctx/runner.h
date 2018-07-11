@@ -30,6 +30,11 @@ struct runner {
       stack_.emplace(std::forward<T>(f));
     }
 
+    void clear() {
+      std::lock_guard g(lock_);
+      stack_ = std::stack<fn>{};
+    }
+
     std::mutex lock_;
     std::stack<fn> stack_;
   };
@@ -42,6 +47,11 @@ struct runner {
       while (ios_.poll_one())
         ;
     }
+  }
+
+  void reset() {
+    ios_.reset();
+    work_stack_.clear();
   }
 
   void execute_work_tasks() {
