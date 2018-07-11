@@ -16,7 +16,7 @@ namespace ctx {
 template <typename Data, typename Fn>
 auto call(Data data, Fn fn, op_id id)
     -> std::shared_ptr<future<Data, decltype(fn())>> {
-  return reinterpret_cast<operation<Data>*>(this_op)->sched_.post(
+  return reinterpret_cast<operation<Data>*>(this_op)->sched_.post_work(
       std::forward<Data>(data), std::forward<Fn>(fn), std::move(id));
 }
 

@@ -39,7 +39,7 @@ foreach(example_file ${example_files})
   get_filename_component(example ${example_file} NAME_WE)
   add_executable(${example} EXCLUDE_FROM_ALL ${example_file})
   target_link_libraries(${example} ${CMAKE_THREAD_LIBS_INIT} ctx)
-  set_target_properties(${example} PROPERTIES COMPILE_FLAGS "-std=c++1y -Wall -Wextra")
+  set_target_properties(${example} PROPERTIES COMPILE_FLAGS "-std=c++17 -Wall -Wextra")
 
   list(APPEND example-targets ${example})
 endforeach()

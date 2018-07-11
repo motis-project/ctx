@@ -123,7 +123,7 @@ void operation<Data>::resume() {
   {
     std::lock_guard<std::mutex> lock(state_mutex_);
     if (reschedule_) {
-      sched_.enqueue(this->shared_from_this());
+      sched_.enqueue_work(this->shared_from_this());
       reschedule_ = false;
     }
     finished_ = finished;

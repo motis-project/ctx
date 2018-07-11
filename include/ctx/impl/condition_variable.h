@@ -37,7 +37,7 @@ template <typename Data>
 void condition_variable<Data>::notify() {
   auto caller_lock = caller_.lock();
   if (caller_lock) {
-    caller_lock->sched_.enqueue(caller_lock);
+    caller_lock->sched_.enqueue_work(caller_lock);
   }
 }
 
