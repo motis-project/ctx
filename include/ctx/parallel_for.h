@@ -23,7 +23,7 @@ void parallel_for(T& vec, Fn fn, ctx::op_id id) {
       }
       fn(elem);
     };
-    futures.push_back(op->sched_.post_void(op->data_, wrapped, id));
+    futures.push_back(op->sched_.post_void_work(op->data_, wrapped, id));
   }
 
   for (auto const& fut : futures) {
