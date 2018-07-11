@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -42,9 +43,9 @@ struct runner {
   explicit runner(boost::asio::io_service& ios) : ios_{ios} {}
 
   void run() {
-    while (ios_.run_one()) {
+    while (!stop_ && ios_.run_one()) {
       execute_work_tasks();
-      while (ios_.poll_one())
+      while (!stop_ && ios_.poll_one())
         ;
     }
   }
@@ -52,10 +53,11 @@ struct runner {
   void reset() {
     ios_.reset();
     work_stack_.clear();
+    stop_ = false;
   }
 
   void execute_work_tasks() {
-    while (true) {
+    while (!stop_) {
       if (auto f = work_stack_.pop(); f.has_value()) {
         (*f)();
       } else {
@@ -74,8 +76,13 @@ struct runner {
     ios_.post(std::forward<Fn>(f));
   }
 
+  void stop() {
+    stop_ = true;
+    ios_.stop();
+  }
   concurrent_stack work_stack_;
   boost::asio::io_service& ios_;
+  std::atomic_bool stop_{false};
 };
 
 }  // namespace ctx
