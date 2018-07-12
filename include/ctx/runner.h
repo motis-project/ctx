@@ -1,10 +1,12 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <mutex>
 #include <optional>
 #include <stack>
+#include <thread>
 
 #include "boost/asio/io_service.hpp"
 
@@ -43,10 +45,10 @@ struct runner {
   explicit runner(boost::asio::io_service& ios) : ios_{ios} {}
 
   void run() {
-    while (!stop_ && ios_.run_one()) {
+    while (!stop_ && !ios_.stopped()) {
+      ios_.poll_one();
       execute_work_tasks();
-      while (!stop_ && ios_.poll_one())
-        ;
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
   }
 
@@ -80,6 +82,7 @@ struct runner {
     stop_ = true;
     ios_.stop();
   }
+
   concurrent_stack work_stack_;
   boost::asio::io_service& ios_;
   std::atomic_bool stop_{false};
