@@ -14,13 +14,11 @@ namespace ctx {
 
 template <typename Data>
 struct scheduler {
-  scheduler(boost::asio::io_service& ios) : next_id_{0u}, runner_{ios} {}
-
+  scheduler() = default;
   scheduler(scheduler const&) = delete;
   scheduler& operator=(scheduler const&) = delete;
 
-  void run() { runner_.run(); }
-  void reset() { runner_.reset(); }
+  void run(unsigned num_threads) { runner_.run(num_threads); }
 
   unsigned next_op_id() { return ++next_id_; }
 
@@ -42,7 +40,7 @@ struct scheduler {
   void enqueue_work(Data, std::function<void()>, op_id);
   void enqueue_work(std::shared_ptr<operation<Data>> const&);
 
-  std::atomic<unsigned> next_id_;
+  std::atomic<unsigned> next_id_ = 0;
   runner runner_;
   stack_manager stack_manager_;
 };

@@ -1,88 +1,62 @@
 #pragma once
 
-#include <atomic>
 #include <functional>
-#include <mutex>
-#include <optional>
-#include <stack>
+#include <thread>
 
 #include "boost/asio/io_service.hpp"
+
+#include "ctx/concurrent_stack.h"
 
 namespace ctx {
 
 struct runner {
-  struct concurrent_stack {
-    using fn = std::function<void()>;
+  void stop() { ios_.stop(); }
 
-    std::optional<fn> pop() {
-      std::lock_guard g(lock_);
-      if (stack_.empty()) {
-        return std::nullopt;
-      } else {
-        auto const r = std::move(stack_.top());
-        stack_.pop();
-        return r;
-      }
+  boost::asio::io_service& ios() { return ios_; }
+
+  void run(unsigned thread_count) {
+    std::vector<std::thread> workers{thread_count};
+    for (auto& w : workers) {
+      w = std::thread([&]() {
+        while (true) {
+          if (auto f = work_stack_.poll(); f.has_value()) {
+            (*f)();
+          } else {
+            return;
+          }
+        }
+      });
     }
 
-    template <typename T>
-    void push(T&& f) {
-      std::lock_guard g(lock_);
-      stack_.emplace(std::forward<T>(f));
-    }
-
-    void clear() {
-      std::lock_guard g(lock_);
-      stack_ = std::stack<fn>{};
-    }
-
-    std::mutex lock_;
-    std::stack<fn> stack_;
-  };
-
-  explicit runner(boost::asio::io_service& ios) : ios_{ios} {}
-
-  void run() {
-    while (!stop_ && ios_.run_one()) {
-      execute_work_tasks();
-      while (!stop_ && ios_.poll_one())
-        ;
-    }
-  }
-
-  void reset() {
-    ios_.reset();
-    work_stack_.clear();
-    stop_ = false;
-  }
-
-  void execute_work_tasks() {
-    while (!stop_) {
-      if (auto f = work_stack_.pop(); f.has_value()) {
-        (*f)();
-      } else {
+    while (true) {
+      try {
+        ios_.run();
+        work_stack_.stop();
         break;
+      } catch (std::exception const& e) {
+        printf("unhandled error: %s\n", e.what());
+      } catch (...) {
+        printf("unhandled unknown error");
       }
+    }
+
+    for (auto& w : workers) {
+      w.join();
     }
   }
 
   template <typename Fn>
-  void post_work_task(Fn&& f) {
+  void post_high_prio(Fn&& f) {
     work_stack_.push(std::forward<Fn>(f));
   }
 
   template <typename Fn>
-  void post_io_task(Fn&& f) {
-    ios_.post(std::forward<Fn>(f));
+  void post_low_prio(Fn&& f) {
+    work_stack_.push_bottom(std::forward<Fn>(f));
   }
 
-  void stop() {
-    stop_ = true;
-    ios_.stop();
-  }
-  concurrent_stack work_stack_;
-  boost::asio::io_service& ios_;
-  std::atomic_bool stop_{false};
+  boost::asio::io_service ios_;
+  concurrent_stack<std::function<void()>> work_stack_;
 };
 
 }  // namespace ctx

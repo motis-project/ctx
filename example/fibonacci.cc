@@ -63,24 +63,17 @@ void check(int n, int expected) {
 }
 
 int main() {
-  constexpr auto kCount = 40;
+  constexpr auto kCount = 45;
 
   std::vector<int> expected;
-  for (int i = 0; i < kCount; ++i) {
+  for (auto i = 0u; i < kCount; ++i) {
     expected.push_back(iterfib(i));
   }
 
-  boost::asio::io_service ios;
-  scheduler_t sched(ios);
-  for (int i = 0; i < kCount; ++i) {
+  scheduler_t sched;
+  for (auto i = 0u; i < kCount; ++i) {
     sched.enqueue_io(simple_data(), std::bind(check, i, expected[i]),
                      op_id("?", "?", 0));
   }
-
-  int worker_count = 8;
-  std::vector<std::thread> threads(worker_count);
-  for (int i = 0; i < worker_count; ++i) {
-    threads[i] = std::thread([&]() { sched.run(); });
-  }
-  std::for_each(begin(threads), end(threads), [](std::thread& t) { t.join(); });
+  sched.run(std::thread::hardware_concurrency());
 }

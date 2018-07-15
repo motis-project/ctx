@@ -35,9 +35,6 @@ struct access_scheduler : public scheduler<Data> {
     access_scheduler& ctrl_;
   };
 
-  explicit access_scheduler(boost::asio::io_service& ios)
-      : scheduler<Data>{ios} {};
-
   void start_read(op_type_t const type) {
     std::unique_lock<std::mutex> l{lock_, std::defer_lock_t{}};
 

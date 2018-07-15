@@ -98,7 +98,7 @@ void scheduler<Data>::enqueue_io(Data d, std::function<void()> fn, op_id id) {
 template <typename Data>
 void scheduler<Data>::enqueue_io(std::shared_ptr<operation<Data>> const& op) {
   op->on_transition(transition::ENQUEUE);
-  runner_.post_io_task([op]() { op->resume(); });
+  runner_.post_low_prio([op]() { op->resume(); });
 }
 
 template <typename Data>
@@ -111,7 +111,7 @@ void scheduler<Data>::enqueue_work(Data d, std::function<void()> fn, op_id id) {
 template <typename Data>
 void scheduler<Data>::enqueue_work(std::shared_ptr<operation<Data>> const& op) {
   op->on_transition(transition::ENQUEUE);
-  runner_.post_work_task([op]() { op->resume(); });
+  runner_.post_high_prio([op]() { op->resume(); });
 }
 
 }  // namespace ctx
