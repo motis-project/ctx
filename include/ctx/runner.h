@@ -38,6 +38,7 @@ struct runner {
       } catch (...) {
         printf("unhandled unknown error");
       }
+      ios_.reset();
     }
 
     for (auto& w : workers) {
