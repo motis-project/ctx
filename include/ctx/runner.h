@@ -39,6 +39,7 @@ struct runner {
         printf("unhandled unknown error");
       }
       ios_.reset();
+      work_stack_.reset();
     }
 
     for (auto& w : workers) {
@@ -46,6 +47,7 @@ struct runner {
     }
 
     ios_.reset();
+    work_stack_.reset();
   }
 
   template <typename Fn>

@@ -33,6 +33,11 @@ struct concurrent_stack {
     return data_.size();
   }
 
+  void reset() {
+    std::lock_guard sync(lock_);
+    stop_ = false;
+  }
+
   template <typename Arg>
   void push(Arg&& f) {
     std::lock_guard sync(lock_);
