@@ -43,6 +43,8 @@ struct runner {
     for (auto& w : workers) {
       w.join();
     }
+
+    ios_.reset();
   }
 
   template <typename Fn>
