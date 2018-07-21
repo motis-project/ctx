@@ -15,6 +15,9 @@ struct runner {
   boost::asio::io_service& ios() { return ios_; }
 
   void run(unsigned thread_count) {
+    ios_.reset();
+    work_stack_.reset();
+
     std::vector<std::thread> workers{thread_count};
     for (auto& w : workers) {
       w = std::thread([&]() {
@@ -38,16 +41,11 @@ struct runner {
       } catch (...) {
         printf("unhandled unknown error");
       }
-      ios_.reset();
-      work_stack_.reset();
     }
 
     for (auto& w : workers) {
       w.join();
     }
-
-    ios_.reset();
-    work_stack_.reset();
   }
 
   template <typename Fn>
