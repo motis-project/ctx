@@ -52,6 +52,11 @@ struct concurrent_stack {
     cv_.notify_all();
   }
 
+  void clear() {
+    std::lock_guard sync(lock_);
+    data_.clear();
+  }
+
 private:
   T get_and_remove_top() {
     auto const r = std::move(data_.back());

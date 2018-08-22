@@ -14,7 +14,7 @@ struct runner {
 
   boost::asio::io_service& ios() { return ios_; }
 
-  void run(unsigned thread_count) {
+  void run(unsigned thread_count, bool quit_on_ios_exit = false) {
     ios_.reset();
     work_stack_.reset();
 
@@ -35,6 +35,9 @@ struct runner {
       try {
         ios_.run();
         work_stack_.stop();
+        if (quit_on_ios_exit) {
+          work_stack_.clear();
+        }
         break;
       } catch (std::exception const& e) {
         printf("unhandled error: %s\n", e.what());
