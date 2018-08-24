@@ -9,6 +9,7 @@
 namespace ctx {
 
 enum class op_type_t { IO, WORK };
+enum class access_t { NONE, READ, WRITE };
 
 template <typename Data>
 struct access_scheduler : public scheduler<Data> {
@@ -92,6 +93,37 @@ struct access_scheduler : public scheduler<Data> {
     entry.type_ == op_type_t::IO ? this->enqueue_io(entry.op_)
                                  : this->enqueue_work(entry.op_);
     queue.erase(begin(queue));
+  }
+
+  template <typename Fn>
+  void enqueue(Data d, Fn&& fn, op_id id, op_type_t op_type, access_t access) {
+    switch (access) {
+      case access_t::NONE:
+        (op_type == op_type_t::IO)
+            ? this->enqueue_io(d, std::forward<Fn>(fn), id)
+            : this->enqueue_work(d, std::forward<Fn>(fn), id);
+        break;
+
+      case access_t::READ: {
+        auto f = [fn, op_type, this]() {
+          write r{*this, op_type};
+          return fn();
+        };
+        (op_type == op_type_t::IO) ? this->enqueue_io(d, std::move(f), id)
+                                   : this->enqueue_work(d, std::move(f), id);
+        break;
+      }
+
+      case access_t::WRITE: {
+        auto f = [fn, op_type, this]() {
+          read r{*this, op_type};
+          return fn();
+        };
+        (op_type == op_type_t::IO) ? this->enqueue_io(d, std::move(f), id)
+                                   : this->enqueue_work(d, std::move(f), id);
+        break;
+      }
+    }
   }
 
   template <typename Fn>

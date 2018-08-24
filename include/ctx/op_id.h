@@ -24,8 +24,8 @@ struct op_id {
 
   std::string name;
   char const* created_at;
-  unsigned parent_index;
-  unsigned index;
+  unsigned parent_index{0};
+  unsigned index{0};
 };
 
 }  // namespace ctx
