@@ -106,7 +106,7 @@ struct access_scheduler : public scheduler<Data> {
 
       case access_t::READ: {
         auto f = [fn, op_type, this]() {
-          write r{*this, op_type};
+          read r{*this, op_type};
           return fn();
         };
         (op_type == op_type_t::IO) ? this->enqueue_io(d, std::move(f), id)
@@ -116,7 +116,7 @@ struct access_scheduler : public scheduler<Data> {
 
       case access_t::WRITE: {
         auto f = [fn, op_type, this]() {
-          read r{*this, op_type};
+          write r{*this, op_type};
           return fn();
         };
         (op_type == op_type_t::IO) ? this->enqueue_io(d, std::move(f), id)
