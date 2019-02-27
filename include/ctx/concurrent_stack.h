@@ -52,9 +52,11 @@ struct concurrent_stack {
     cv_.notify_all();
   }
 
-  void clear() {
+  size_t clear() {
     std::lock_guard sync(lock_);
+    auto const size = data_.size();
     data_.clear();
+    return size;
   }
 
 private:
