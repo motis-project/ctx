@@ -32,7 +32,6 @@ struct runner {
             (*f)();
             if (--elements_in_system_ == 0ul) {
               work_guard.reset();
-              break;
             }
           } else {
             return;
