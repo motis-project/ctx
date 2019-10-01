@@ -3,13 +3,13 @@
 #include <mutex>
 #include <vector>
 
+#include "ctx/access_t.h"
 #include "ctx/operation.h"
 #include "ctx/scheduler.h"
 
 namespace ctx {
 
 enum class op_type_t { IO, WORK };
-enum class access_t { NONE, READ, WRITE };
 
 template <typename Data>
 struct access_scheduler : public scheduler<Data> {
