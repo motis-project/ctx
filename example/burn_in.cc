@@ -40,7 +40,7 @@ auto draw(Distribution& dist) {
 }
 
 void sleep_maybe() {
-  if (branch_dist(gen)) {
+  if (draw(branch_dist)) {
     auto ms = std::min(500, static_cast<int>(draw(sleep_dur_dist) * 10));
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
   }
