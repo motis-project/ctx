@@ -6,6 +6,7 @@ gcc-release:
   tags:
     - disco
   script:
+    - git submodule update --init --recursive
     - ccache -z
     - export PATH=/usr/lib/ccache:$PATH
     - export CXX=g++-9
@@ -26,6 +27,7 @@ clang-debug-asan:
   tags:
     - disco
   script:
+    - git submodule update --init --recursive
     - ccache -z
     - export PATH=/usr/lib/ccache:$PATH
     - export UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1
@@ -48,6 +50,7 @@ gcc-debug-valgrind:
   tags:
     - disco
   script:
+    - git submodule update --init --recursive
     - ccache -z
     - export PATH=/usr/lib/ccache:$PATH
     - export CXX=g++-9
@@ -68,6 +71,7 @@ msvc-release:
   tags:
     - windows
   script:
+    - git submodule update --init --recursive
     - set WD=%cd%
     - call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
     - cd %WD%
@@ -86,6 +90,7 @@ msvc-debug:
   tags:
     - windows
   script:
+    - git submodule update --init --recursive
     - set WD=%cd%
     - call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
     - cd %WD%
