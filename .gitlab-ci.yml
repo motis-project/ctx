@@ -1,0 +1,100 @@
+variables:
+  ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer
+
+# GCC production
+gcc-release:
+  tags:
+    - disco
+  script:
+    - ccache -z
+    - export PATH=/usr/lib/ccache:$PATH
+    - export CXX=g++-9
+    - export CC=gcc-9
+    - export BOOST_ROOT=~/boost_1_71_0
+    - mkdir -p build-release
+    - cd build-release
+    - cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
+    - ninja examples
+    - ./burn_in
+    - ./fibonacci
+    - ./locking
+    - ./parallel_for
+    - ccache -s
+
+# Clang debug with address sanitizer
+clang-debug-asan:
+  tags:
+    - disco
+  script:
+    - ccache -z
+    - export PATH=/usr/lib/ccache:$PATH
+    - export UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1
+    - export CXXFLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++"
+    - export BOOST_ROOT=~/boost_1_71_0-libc++
+    - export CXX=clang++-9
+    - export CC=clang-9
+    - mkdir -p build-clang-debug-asan
+    - cd build-clang-debug-asan
+    - cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCTX_ASAN=true ..
+    - ninja examples
+    - ./burn_in
+    - ./fibonacci
+    - ./locking
+    - ./parallel_for
+    - ccache -s
+
+# GCC debug valgrind
+gcc-debug-valgrind:
+  tags:
+    - disco
+  script:
+    - ccache -z
+    - export PATH=/usr/lib/ccache:$PATH
+    - export CXX=g++-9
+    - export CC=gcc-9
+    - export BOOST_ROOT=~/boost_1_71_0
+    - mkdir -p build-gcc-debug-valgrind
+    - cd build-gcc-debug-valgrind
+    - cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCTX_VALGRIND=true ..
+    - ninja examples
+    - valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./burn_in
+    - valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./fibonacci
+    - valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./locking
+    - valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./parallel_for
+    - ccache -s
+
+# MSVC release
+msvc-release:
+  tags:
+    - windows
+  script:
+    - set WD=%cd%
+    - call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+    - cd %WD%
+    - set BOOST_ROOT=C:\boost_1_70_0
+    - mkdir build-msvc-release
+    - cd build-msvc-release
+    - cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+    - ninja examples
+    - burn_in
+    - fibonacci
+    - locking
+    - parallel_for
+
+# MSVC debug
+msvc-debug:
+  tags:
+    - windows
+  script:
+    - set WD=%cd%
+    - call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+    - cd %WD%
+    - set BOOST_ROOT=C:\boost_1_70_0
+    - mkdir build-msvc-debug
+    - cd build-msvc-debug
+    - cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ..
+    - ninja examples
+    - burn_in
+    - fibonacci
+    - locking
+    - parallel_for
