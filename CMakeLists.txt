@@ -1,3 +1,8 @@
+set(CMAKE_USER_MAKE_RULES_OVERRIDE
+   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/c_flag_overrides.cmake)
+set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX
+   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/cxx_flag_overrides.cmake)
+
 project(ctx)
 cmake_minimum_required(VERSION 2.8)
 
@@ -5,6 +10,7 @@ add_subdirectory(external_lib/deboost.context)
 
 find_package(Threads)
 find_package(Boost COMPONENTS system thread REQUIRED)
+link_directories(${Boost_LIBRARY_DIRS})
 
 option(CTX_VALGRIND "CTX_VALGRIND" OFF)
 if (${CTX_VALGRIND})
