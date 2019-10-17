@@ -9,6 +9,11 @@ cmake_minimum_required(VERSION 3.13)
 add_subdirectory(external_lib/deboost.context)
 
 find_package(Threads)
+if (MSVC)
+  set(Boost_USE_STATIC_LIBS ON)
+  set(Boost_USE_MULTITHREADED ON)
+  set(Boost_USE_STATIC_RUNTIME ON)
+endif()
 find_package(Boost COMPONENTS system thread REQUIRED)
 link_directories(${Boost_LIBRARY_DIRS})
 
