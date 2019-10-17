@@ -4,8 +4,6 @@
 #include <numeric>
 #include <vector>
 
-#include "boost/thread/thread.hpp"
-
 using namespace ctx;
 
 struct simple_data {
@@ -24,25 +22,20 @@ int main() {
 
   std::cout << "process:\n";
   boost::asio::io_service ios;
-  scheduler<simple_data> sched(ios);
-  sched.enqueue(simple_data(),
-                [&] {
-                  parallel_for<simple_data>(values,
-                                            [](int& value) {
-                                              std::cout << value << " ";
-                                              value *= value;
-                                            },
-                                            {});
-                },
-                op_id("?", "?", 0));
+  scheduler<simple_data> sched;
+  sched.enqueue_work(simple_data(),
+                     [&] {
+                       parallel_for<simple_data>(values,
+                                                 [](int& value) {
+                                                   std::cout << value << " ";
+                                                   value *= value;
+                                                 },
+                                                 {});
+                     },
+                     op_id("?", "?", 0));
 
   int worker_count = 8;
-  std::vector<boost::thread> threads(worker_count);
-  for (int i = 0; i < worker_count; ++i) {
-    threads[i] = boost::thread([&]() { ios.run(); });
-  }
-  std::for_each(begin(threads), end(threads),
-                [](boost::thread& t) { t.join(); });
+  sched.run(worker_count);
   std::cout << "\n";
 
   std::cout << "after:\n";

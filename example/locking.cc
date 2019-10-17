@@ -32,25 +32,20 @@ int main() {
     data.emplace_back(data[data.size() - 1] + data[data.size() - 2]);
   };
 
-  boost::asio::io_service ios;
-  access_scheduler<simple_data> c(ios);
+  access_scheduler<simple_data> c;
   for (int i = 0; i < 2000; ++i) {
-    c.enqueue_read(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_write(simple_data{}, write_op, op_id("write", "?", 0));
+    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
+    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
+    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
+    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
+    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
+    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
+    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
+    c.enqueue_write_work(simple_data{}, write_op, op_id("write", "?", 0));
   }
 
   constexpr auto const worker_count = 4;
-  std::vector<std::thread> threads(worker_count);
-  for (int i = 0; i < worker_count; ++i) {
-    threads[i] = std::thread([&]() { ios.run(); });
-  }
-  std::for_each(begin(threads), end(threads), [](std::thread& t) { t.join(); });
+  c.run(worker_count);
 
   std::cout << data.back() << "\n";
 }

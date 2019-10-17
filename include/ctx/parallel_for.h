@@ -29,7 +29,7 @@ void parallel_for(T& vec, Fn fn, ctx::op_id id) {
   for (auto const& fut : futures) {
     try {
       fut->val();
-    } catch (std::exception const& e) {
+    } catch (std::exception const&) {
       if (!has_execption.exchange(true)) {
         exception = std::current_exception();
       }
