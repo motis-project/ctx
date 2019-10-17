@@ -2,6 +2,7 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
+#include <mutex>
 #include <queue>
 #include <random>
 #include <thread>
@@ -24,17 +25,23 @@ constexpr auto kRunTime = 10s;
 std::random_device rd;
 std::mt19937 gen(rd());
 
+std::mutex rng_mutex;
 std::bernoulli_distribution branch_dist(0.1);
-std::bernoulli_distribution sleep_dist(0.2);
 std::bernoulli_distribution throw_dist(0.2);
 std::bernoulli_distribution catch_dist(0.8);
 std::exponential_distribution<> sleep_dur_dist;
 
 std::uniform_int_distribution<> int_dist(1, 6);
 
+template <typename Distribution>
+auto draw(Distribution& dist) {
+  std::lock_guard guard{rng_mutex};
+  return dist(gen);
+}
+
 void sleep_maybe() {
   if (branch_dist(gen)) {
-    auto ms = std::min(500, static_cast<int>(sleep_dur_dist(gen) * 10));
+    auto ms = std::min(500, static_cast<int>(draw(sleep_dur_dist) * 10));
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
   }
 }
@@ -42,20 +49,20 @@ void sleep_maybe() {
 int work() {
   sleep_maybe();
 
-  if (sleep_dist(gen)) {
+  if (draw(throw_dist)) {
     throw std::runtime_error("error");
   }
 
-  if (branch_dist(gen)) {
+  if (draw(branch_dist)) {
     std::vector<future_ptr<simple_data, int>> futures;
-    auto count = int_dist(gen);
+    auto count = draw(int_dist);
     for (int i = 0; i < count; ++i) {
       futures.push_back(ctx_call(simple_data(), work));
     }
 
     int result = 0;
     for (int i = 0; i < count; ++i) {
-      if (catch_dist(gen)) {
+      if (draw(catch_dist)) {
         try {
           result += futures[i]->val();
         } catch (...) {
