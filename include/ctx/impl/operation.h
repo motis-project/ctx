@@ -115,7 +115,6 @@ void operation<Data>::resume() {
   enter_op_start_switch();
   auto const t = jump_fcontext(op_ctx_, this);
   exit_op_finish_switch();
-  this_op = nullptr;
 
   op_ctx_ = t.ctx;
   auto const finished = t.data == nullptr;
