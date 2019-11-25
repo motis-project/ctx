@@ -9,13 +9,6 @@ cmake_minimum_required(VERSION 3.10)
 add_subdirectory(external_lib/deboost.context)
 
 find_package(Threads)
-if (MSVC)
-  set(Boost_USE_STATIC_LIBS ON)
-  set(Boost_USE_MULTITHREADED ON)
-  set(Boost_USE_STATIC_RUNTIME ON)
-endif()
-find_package(Boost COMPONENTS system thread REQUIRED)
-link_directories(${Boost_LIBRARY_DIRS})
 
 option(CTX_VALGRIND "CTX_VALGRIND" OFF)
 if (${CTX_VALGRIND})
@@ -37,7 +30,7 @@ configure_file (
 )
 
 add_library(ctx src/ctx.cc)
-target_link_libraries(ctx fcontext ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+target_link_libraries(ctx fcontext)
 target_include_directories(ctx
   PUBLIC include ${CMAKE_BINARY_DIR}/generated ${Boost_INCLUDE_DIR})
 target_compile_features(ctx PUBLIC cxx_std_17)
