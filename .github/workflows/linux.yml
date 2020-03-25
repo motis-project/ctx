@@ -48,17 +48,21 @@ jobs:
         key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
     - name: CMake
-      run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DUTL_LINT=${{ matrix.lint }}
+      run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DCTX_ASAN=${{ matrix.cxx == clang-9-san }}
 
     - name: Build
       run: |
         ccache -z
         cmake --build build --target examples
         ccache -s
-    - name: Run Tests
-      run: |
-        cd build
-        ./burn_in
-        ./fibonacci
-        ./locking
-        ./parallel_for
+    - name: Run Burn In
+      run: ./build/burn_in
+
+    - name: Run Fibonacci
+      run: ./build/fibonacci
+
+    - name: Run Locking
+      run: ./build/locking
+
+    - name: Run Parallel For
+      run: ./build/parallel_for
