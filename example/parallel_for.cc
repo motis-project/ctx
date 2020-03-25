@@ -23,16 +23,17 @@ int main() {
   std::cout << "process:\n";
   boost::asio::io_service ios;
   scheduler<simple_data> sched;
-  sched.enqueue_work(simple_data(),
-                     [&] {
-                       parallel_for<simple_data>(values,
-                                                 [](int& value) {
-                                                   std::cout << value << " ";
-                                                   value *= value;
-                                                 },
-                                                 {});
-                     },
-                     op_id("?", "?", 0));
+  sched.enqueue_work(
+      simple_data(),
+      [&] {
+        parallel_for<simple_data>(values,
+                                  [](int& value) {
+                                    std::cout << value << " ";
+                                    value *= value;
+                                  },
+                                  {});
+      },
+      op_id("?", "?", 0));
 
   int worker_count = 8;
   sched.run(worker_count);
