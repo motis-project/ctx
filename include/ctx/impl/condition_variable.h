@@ -15,8 +15,7 @@ std::weak_ptr<operation<Data>> get_caller() {
 }
 
 template <typename Data>
-condition_variable<Data>::condition_variable()
-    : caller_(get_caller<Data>()) {}
+condition_variable<Data>::condition_variable() : caller_(get_caller<Data>()) {}
 
 template <typename Data>
 template <typename Predicate>

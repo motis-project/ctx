@@ -1,0 +1,67 @@
+name: Linux Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Format files
+      run: find src include example -type f -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-9 -i
+
+    - name: Check for differences
+      run: |
+        git status --porcelain
+        git status --porcelain | xargs -I {} -0 test -z \"{}\"
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: motisproject/cpp-build:latest
+    strategy:
+      matrix:
+        cxx: [gcc-9, clang-9, clang-9-san]
+        mode: [Debug, Release]
+        exclude:
+        - cxx: clang-9-san
+          mode: Release
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_NOHASHDIR: true
+
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Cache
+      uses: actions/cache@v1.1.2
+      with:
+        path: ${{ github.workspace }}/.ccache
+        key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+
+    - name: CMake
+      run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DCTX_ASAN=`if [ "${{ matrix.cxx }}" = "clang-9-san" ]; then echo "On"; else echo "Off"; fi`
+
+    - name: Build
+      run: |
+        ccache -z
+        cmake --build build --target examples
+        ccache -s
+    - name: Run Burn In
+      run: ./build/burn_in
+
+    - name: Run Fibonacci
+      run: ./build/fibonacci
+
+    - name: Run Locking
+      run: ./build/locking
+
+    - name: Run Parallel For
+      run: ./build/parallel_for

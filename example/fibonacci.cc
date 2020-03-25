@@ -63,7 +63,7 @@ void check(int n, int expected) {
 }
 
 int main() {
-  constexpr auto kCount = 45;
+  constexpr auto kCount = 30;
 
   std::vector<int> expected;
   for (auto i = 0u; i < kCount; ++i) {

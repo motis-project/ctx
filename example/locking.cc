@@ -33,7 +33,7 @@ int main() {
   };
 
   access_scheduler<simple_data> c;
-  for (int i = 0; i < 2000; ++i) {
+  for (int i = 0; i < 100; ++i) {
     c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
     c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
     c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));

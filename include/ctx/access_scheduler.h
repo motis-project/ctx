@@ -128,122 +128,134 @@ struct access_scheduler : public scheduler<Data> {
 
   template <typename Fn>
   void enqueue_read_io(Data d, Fn&& fn, op_id id) {
-    this->enqueue_io(d,
-                     [fn, this]() {
-                       read r{*this, op_type_t::IO};
-                       return fn();
-                     },
-                     id);
+    this->enqueue_io(
+        d,
+        [fn, this]() {
+          read r{*this, op_type_t::IO};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   void enqueue_write_io(Data d, Fn&& fn, op_id id) {
-    this->enqueue_io(d,
-                     [fn, this]() {
-                       write r{*this, op_type_t::IO};
-                       return fn();
-                     },
-                     id);
+    this->enqueue_io(
+        d,
+        [fn, this]() {
+          write r{*this, op_type_t::IO};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   auto post_read_io(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_io(d,
-                                    [fn, this]() {
-                                      read r{*this, op_type_t::IO};
-                                      return fn();
-                                    },
-                                    id);
+    return scheduler<Data>::post_io(
+        d,
+        [fn, this]() {
+          read r{*this, op_type_t::IO};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   auto post_void_read_io(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_io(d,
-                                    [fn, this]() {
-                                      read r{*this, op_type_t::IO};
-                                      return fn();
-                                    },
-                                    id);
+    return scheduler<Data>::post_io(
+        d,
+        [fn, this]() {
+          read r{*this, op_type_t::IO};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   auto post_write_io(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_io(d,
-                                    [fn, this]() {
-                                      write r{*this, op_type_t::IO};
-                                      return fn();
-                                    },
-                                    id);
+    return scheduler<Data>::post_io(
+        d,
+        [fn, this]() {
+          write r{*this, op_type_t::IO};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   auto post_void_write_io(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_io(d,
-                                    [fn, this]() {
-                                      write r{*this, op_type_t::IO};
-                                      return fn();
-                                    },
-                                    id);
+    return scheduler<Data>::post_io(
+        d,
+        [fn, this]() {
+          write r{*this, op_type_t::IO};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   void enqueue_read_work(Data d, Fn&& fn, op_id id) {
-    this->enqueue_work(d,
-                       [fn, this]() {
-                         read r{*this, op_type_t::WORK};
-                         return fn();
-                       },
-                       id);
+    this->enqueue_work(
+        d,
+        [fn, this]() {
+          read r{*this, op_type_t::WORK};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   void enqueue_write_work(Data d, Fn&& fn, op_id id) {
-    this->enqueue_work(d,
-                       [fn, this]() {
-                         write r{*this, op_type_t::WORK};
-                         return fn();
-                       },
-                       id);
+    this->enqueue_work(
+        d,
+        [fn, this]() {
+          write r{*this, op_type_t::WORK};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   auto post_read_work(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_work(d,
-                                      [fn, this]() {
-                                        read r{*this, op_type_t::WORK};
-                                        return fn();
-                                      },
-                                      id);
+    return scheduler<Data>::post_work(
+        d,
+        [fn, this]() {
+          read r{*this, op_type_t::WORK};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   auto post_void_read_work(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_work(d,
-                                      [fn, this]() {
-                                        read r{*this, op_type_t::WORK};
-                                        return fn();
-                                      },
-                                      id);
+    return scheduler<Data>::post_work(
+        d,
+        [fn, this]() {
+          read r{*this, op_type_t::WORK};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   auto post_write_work(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_work(d,
-                                      [fn, this]() {
-                                        write r{*this, op_type_t::WORK};
-                                        return fn();
-                                      },
-                                      id);
+    return scheduler<Data>::post_work(
+        d,
+        [fn, this]() {
+          write r{*this, op_type_t::WORK};
+          return fn();
+        },
+        id);
   }
 
   template <typename Fn>
   auto post_void_write_work(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_work(d,
-                                      [fn, this]() {
-                                        write r{*this, op_type_t::WORK};
-                                        return fn();
-                                      },
-                                      id);
+    return scheduler<Data>::post_work(
+        d,
+        [fn, this]() {
+          write r{*this, op_type_t::WORK};
+          return fn();
+        },
+        id);
   }
 
   std::mutex lock_;

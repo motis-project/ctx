@@ -1,9 +1,18 @@
 project(ctx)
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
-add_subdirectory(external_lib/deboost.context)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+include(cmake/pkg.cmake)
 
 find_package(Threads)
+if (MSVC)
+  set(Boost_USE_STATIC_LIBS ON)
+  set(Boost_USE_MULTITHREADED ON)
+  set(Boost_USE_STATIC_RUNTIME ON)
+endif()
+find_package(Boost COMPONENTS system thread REQUIRED)
+link_directories(${Boost_LIBRARY_DIRS})
 
 option(CTX_VALGRIND "CTX_VALGRIND" OFF)
 if (${CTX_VALGRIND})
@@ -14,6 +23,7 @@ endif()
 
 option(CTX_ASAN "CTX_ASAN" OFF)
 if (${CTX_ASAN})
+  message(STATUS "Address Sanitizer support enabled")
   set(CTX_ENABLE_ASAN 1)
 else()
   set(CTX_ENABLE_ASAN 0)
@@ -31,6 +41,9 @@ target_include_directories(ctx
 target_compile_features(ctx PUBLIC cxx_std_17)
 if (NOT MSVC)
   set_target_properties(ctx PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
+endif()
+if (MSVC)
+  target_compile_definitions(ctx PUBLIC _WIN32_WINNT=0x0601)
 endif()
 
 set(example-targets "")

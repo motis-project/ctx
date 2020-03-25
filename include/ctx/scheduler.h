@@ -3,8 +3,6 @@
 #include <atomic>
 #include <memory>
 
-#include "boost/asio/io_service.hpp"
-
 #include "ctx/future.h"
 #include "ctx/op_id.h"
 #include "ctx/runner.h"

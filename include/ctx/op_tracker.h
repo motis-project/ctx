@@ -1,8 +1,8 @@
 #pragma once
 
-#include <mutex>
-#include <map>
 #include <atomic>
+#include <map>
+#include <mutex>
 
 #include "boost/lockfree/queue.hpp"
 
