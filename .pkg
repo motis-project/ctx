@@ -1,0 +1,4 @@
+[deboost.context]
+  url=git@github.com:motis-project/deboost.context.git
+  branch=master
+  commit=640476c425cf3b5643f87f8fbb35b8e2063e38ae
