@@ -24,10 +24,14 @@ jobs:
     - name: Build
       run: cmake --build build --target examples --config ${{ matrix.mode }}
 
-    - name: Run tests
-      run: |
-        cd build\${{ matrix.mode }}
-        burn_in.exe
-        fibonacci.exe
-        locking.exe
-        parallel_for.exe
+    - name: Run Burn In
+      run: .\build\${{ matrix.mode }}\burn_in.exe
+
+    - name: Run Fibonacci
+      run: .\build\${{ matrix.mode }}\fibonacci.exe
+
+    - name: Run Locking
+      run: .\build\${{ matrix.mode }}\locking.exe
+
+    - name: Run Parallel For
+      run: .\build\${{ matrix.mode }}\parallel_for.exe
