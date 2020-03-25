@@ -23,6 +23,7 @@ endif()
 
 option(CTX_ASAN "CTX_ASAN" OFF)
 if (${CTX_ASAN})
+  message(STATUS "Address Sanitizer support enabled")
   set(CTX_ENABLE_ASAN 1)
 else()
   set(CTX_ENABLE_ASAN 0)
