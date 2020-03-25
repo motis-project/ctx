@@ -48,7 +48,7 @@ jobs:
         key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
     - name: CMake
-      run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DCTX_ASAN=${{ matrix.cxx == clang-9-san }}
+      run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DCTX_ASAN=${{ matrix.cxx == "clang-9-san" }}
 
     - name: Build
       run: |
