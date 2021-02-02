@@ -2,3 +2,7 @@
   url=git@github.com:motis-project/deboost.context.git
   branch=master
   commit=250247337f8eca95b33d9349773a9047ddf2b978
+[boost]
+  url=git@github.com:motis-project/boost.git
+  branch=master
+  commit=d60b850a4be7e7690e4098c0e55125608c040d28
