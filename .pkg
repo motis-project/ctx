@@ -1,7 +1,7 @@
 [deboost.context]
   url=git@github.com:motis-project/deboost.context.git
   branch=master
-  commit=3cb67dde49b6d83b4476d5228f1cf41b6799cbaf
+  commit=e586729432e76f97eccb2cb75d8287cab47198f5
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
