@@ -2,6 +2,6 @@
 
 namespace ctx {
 
-CTX_ATTRIBUTE_TLS void* this_op;
+CTX_ATTRIBUTE_TLS void* this_op = nullptr;
 
 }  // namespace ctx
