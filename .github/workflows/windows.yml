@@ -30,13 +30,13 @@ jobs:
           cmake --build build --target examples
 
       - name: Run Burn In
-        run: .\build\${{ matrix.mode }}\burn_in.exe
+        run: .\build\burn_in.exe
 
       - name: Run Fibonacci
-        run: .\build\${{ matrix.mode }}\fibonacci.exe
+        run: .\build\fibonacci.exe
 
       - name: Run Locking
-        run: .\build\${{ matrix.mode }}\locking.exe
+        run: .\build\locking.exe
 
       - name: Run Parallel For
-        run: .\build\${{ matrix.mode }}\parallel_for.exe
+        run: .\build\parallel_for.exe
