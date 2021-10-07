@@ -31,14 +31,14 @@ struct access_scheduler : public scheduler<Data> {
 
   struct res_state {
     bool finished() const {
-      return !write_active_ && read_count_ == 0U &&  //
+      return !write_active_ && active_readers_ == 0U &&  //
              write_queue_.empty() && read_queue_.empty();
     }
 
     std::vector<queue_entry> write_queue_;
     std::vector<queue_entry> read_queue_;
     size_t usage_count_{0U};
-    size_t read_count_{0U};
+    size_t active_readers_{0U};
     bool write_active_{false};
   };
 
@@ -57,7 +57,7 @@ struct access_scheduler : public scheduler<Data> {
             return false;
           }
         } else {
-          if (res_s.write_active_ || res_s.read_count_ != 0U) {
+          if (res_s.write_active_ || res_s.active_readers_ != 0U) {
             res_s.write_queue_.emplace_back(
                 queue_entry{op_type, op->shared_from_this()});
             return false;
@@ -71,7 +71,7 @@ struct access_scheduler : public scheduler<Data> {
       for (access_request const& a : access) {
         auto& res_s = state_[a.res_id_];
         if (a.access_ == access_t::READ) {
-          ++res_s.read_count_;
+          ++res_s.active_readers_;
         } else {
           res_s.write_active_ = true;
         }
@@ -108,8 +108,8 @@ struct access_scheduler : public scheduler<Data> {
       }
 
       if (a.access_ == access_t::READ) {
-        --res_s.read_count_;
-        if (res_s.read_count_ == 0U && !res_s.write_queue_.empty()) {
+        --res_s.active_readers_;
+        if (res_s.active_readers_ == 0U && !res_s.write_queue_.empty()) {
           unqueue(res_s.write_queue_);
         } else if (!res_s.read_queue_.empty()) {
           unqueue(res_s.read_queue_);
