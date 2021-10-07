@@ -1,90 +1,127 @@
 #pragma once
 
+#include <utl/raii.h>
+#include <map>
 #include <mutex>
+#include <variant>
 #include <vector>
+
+#include "utl/to_vec.h"
 
 #include "ctx/access_t.h"
 #include "ctx/operation.h"
-#include "ctx/scheduler.h"
 
 namespace ctx {
 
-enum class op_type_t { IO, WORK };
+enum class op_type_t : uint8_t { IO, WORK };
+
+struct access_request {
+  uint64_t res_id_{0U};
+  access_t access_{access_t::READ};
+};
 
 template <typename Data>
 struct access_scheduler : public scheduler<Data> {
+  using res_id_t = uint64_t;
+
   struct queue_entry {
-    using op = std::shared_ptr<operation<Data>>;
-    queue_entry(op_type_t type, op const& op) : type_{type}, op_{op} {}
     op_type_t type_;
-    op op_;
+    std::shared_ptr<operation<Data>> op_;
   };
 
-  struct read {
-    explicit read(access_scheduler& ctrl, op_type_t const type) : ctrl_{ctrl} {
-      ctrl_.start_read(type);
+  struct res_state {
+    bool finished() const {
+      return !active_write_ && active_readers_ == 0U &&  //
+             write_queue_.empty() && read_queue_.empty();
     }
-    ~read() { ctrl_.end_read(); }
-    access_scheduler& ctrl_;
+
+    std::vector<queue_entry> write_queue_;
+    std::vector<queue_entry> read_queue_;
+    size_t usage_count_{0U};
+    size_t active_readers_{0U};
+    bool active_write_{false};
   };
 
-  struct write {
-    explicit write(access_scheduler& ctrl, op_type_t const type) : ctrl_{ctrl} {
-      ctrl_.start_write(type);
+  void wait_for_access(op_type_t const op_type,
+                       std::vector<access_request> const& access) {
+    auto l = std::unique_lock{lock_, std::defer_lock_t{}};
+    auto const op = current_op<Data>();
+
+    auto const get_access = [&]() {
+      for (access_request const& a : access) {
+        auto& res_s = state_[a.res_id_];
+        if (a.access_ == access_t::READ) {
+          if (res_s.active_write_) {
+            res_s.read_queue_.emplace_back(
+                queue_entry{op_type, op->shared_from_this()});
+            return false;
+          }
+        } else {
+          if (res_s.active_write_ || res_s.active_readers_ != 0U) {
+            res_s.write_queue_.emplace_back(
+                queue_entry{op_type, op->shared_from_this()});
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    auto const activate = [&]() {
+      for (access_request const& a : access) {
+        auto& res_s = state_[a.res_id_];
+        if (a.access_ == access_t::READ) {
+          ++res_s.active_readers_;
+        } else {
+          res_s.active_write_ = true;
+        }
+      }
+    };
+
+    {
+      auto const tmp = std::lock_guard{lock_};
+      for (access_request const& a : access) {
+        ++state_[a.res_id_].usage_count_;
+      }
     }
-    ~write() { ctrl_.end_write(); }
-    access_scheduler& ctrl_;
-  };
 
-  void start_read(op_type_t const type) {
-    std::unique_lock<std::mutex> l{lock_, std::defer_lock_t{}};
-
-  aquire:  // while loop not suitable because condition needs to be locked, to
+  acquire:
     l.lock();
-    if (write_active_) {
-      auto const op = current_op<Data>();
-      read_queue_.emplace_back(type, op->shared_from_this());
+    if (!get_access()) {
       l.unlock();
       op->suspend(/*finish = */ false);
-      goto aquire;
+      goto acquire;
     }
 
-    ++read_count_;
+    activate();
   }
 
-  void end_read() {
-    std::unique_lock<std::mutex> l{lock_};
-    --read_count_;
-    if (read_count_ == 0 && !write_queue_.empty()) {
-      unqueue(write_queue_);
-    } else if (!read_queue_.empty()) {
-      unqueue(read_queue_);
-    }
-  }
+  void end_access(std::vector<access_request> const& access) {
+    auto const l = std::unique_lock{lock_};
+    for (access_request const& a : access) {
+      auto& res_s = state_[a.res_id_];
+      --res_s.usage_count_;
 
-  void start_write(op_type_t const type) {
-    std::unique_lock<std::mutex> l{lock_, std::defer_lock_t{}};
+      if (res_s.usage_count_ == 0U) {
+        state_.erase(a.res_id_);
+        continue;
+      }
 
-  aquire:  // while loop not suitable because condition needs to be locked, too
-    l.lock();
-    if (write_active_ || read_count_ != 0) {
-      auto const op = current_op<Data>();
-      read_queue_.emplace_back(type, op->shared_from_this());
-      l.unlock();
-      op->suspend(/*finish = */ false);
-      goto aquire;
-    }
-
-    write_active_ = true;
-  }
-
-  void end_write() {
-    std::unique_lock<std::mutex> l{lock_};
-    write_active_ = false;
-    if (!write_queue_.empty()) {
-      unqueue(write_queue_);
-    } else if (!read_queue_.empty()) {
-      unqueue(read_queue_);
+      if (a.access_ == access_t::READ) {
+        --res_s.active_readers_;
+        if (res_s.active_readers_ == 0U && !res_s.write_queue_.empty()) {
+          unqueue(res_s.write_queue_);
+        } else if (!res_s.read_queue_.empty()) {
+          unqueue(res_s.read_queue_);
+        }
+      } else {
+        res_s.active_write_ = false;
+        if (!res_s.write_queue_.empty()) {
+          unqueue(res_s.write_queue_);
+        } else if (!res_s.read_queue_.empty()) {
+          unqueue(res_s.read_queue_);
+        }
+      }
     }
   }
 
@@ -96,173 +133,26 @@ struct access_scheduler : public scheduler<Data> {
   }
 
   template <typename Fn>
-  void enqueue(Data d, Fn&& fn, op_id id, op_type_t op_type, access_t access) {
-    switch (access) {
-      case access_t::NONE:
-        (op_type == op_type_t::IO)
-            ? this->enqueue_io(d, std::forward<Fn>(fn), id)
-            : this->enqueue_work(d, std::forward<Fn>(fn), id);
-        break;
-
-      case access_t::READ: {
-        auto f = [fn, op_type, this]() {
-          read r{*this, op_type};
-          return fn();
-        };
-        (op_type == op_type_t::IO) ? this->enqueue_io(d, std::move(f), id)
-                                   : this->enqueue_work(d, std::move(f), id);
-        break;
-      }
-
-      case access_t::WRITE: {
-        auto f = [fn, op_type, this]() {
-          write r{*this, op_type};
-          return fn();
-        };
-        (op_type == op_type_t::IO) ? this->enqueue_io(d, std::move(f), id)
-                                   : this->enqueue_work(d, std::move(f), id);
-        break;
-      }
+  void enqueue(Data&& d, Fn&& fn, op_id const id, op_type_t const op_type,
+               std::vector<access_request>&& access) {
+    if (access.empty()) {
+      (op_type == op_type_t::IO)
+          ? this->enqueue_io(d, std::forward<Fn>(fn), id)
+          : this->enqueue_work(d, std::forward<Fn>(fn), id);
+    } else {
+      auto f = [fn = std::forward<Fn>(fn), access = std::move(access), op_type,
+                this]() {
+        wait_for_access(op_type, access);
+        UTL_FINALLY([&]() { end_access(access); });
+        return fn();
+      };
+      (op_type == op_type_t::IO) ? this->enqueue_io(d, std::move(f), id)
+                                 : this->enqueue_work(d, std::move(f), id);
     }
   }
 
-  template <typename Fn>
-  void enqueue_read_io(Data d, Fn&& fn, op_id id) {
-    this->enqueue_io(
-        d,
-        [fn, this]() {
-          read r{*this, op_type_t::IO};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  void enqueue_write_io(Data d, Fn&& fn, op_id id) {
-    this->enqueue_io(
-        d,
-        [fn, this]() {
-          write r{*this, op_type_t::IO};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  auto post_read_io(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_io(
-        d,
-        [fn, this]() {
-          read r{*this, op_type_t::IO};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  auto post_void_read_io(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_io(
-        d,
-        [fn, this]() {
-          read r{*this, op_type_t::IO};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  auto post_write_io(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_io(
-        d,
-        [fn, this]() {
-          write r{*this, op_type_t::IO};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  auto post_void_write_io(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_io(
-        d,
-        [fn, this]() {
-          write r{*this, op_type_t::IO};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  void enqueue_read_work(Data d, Fn&& fn, op_id id) {
-    this->enqueue_work(
-        d,
-        [fn, this]() {
-          read r{*this, op_type_t::WORK};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  void enqueue_write_work(Data d, Fn&& fn, op_id id) {
-    this->enqueue_work(
-        d,
-        [fn, this]() {
-          write r{*this, op_type_t::WORK};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  auto post_read_work(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_work(
-        d,
-        [fn, this]() {
-          read r{*this, op_type_t::WORK};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  auto post_void_read_work(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_work(
-        d,
-        [fn, this]() {
-          read r{*this, op_type_t::WORK};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  auto post_write_work(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_work(
-        d,
-        [fn, this]() {
-          write r{*this, op_type_t::WORK};
-          return fn();
-        },
-        id);
-  }
-
-  template <typename Fn>
-  auto post_void_write_work(Data d, Fn&& fn, op_id id) {
-    return scheduler<Data>::post_work(
-        d,
-        [fn, this]() {
-          write r{*this, op_type_t::WORK};
-          return fn();
-        },
-        id);
-  }
-
   std::mutex lock_;
-  std::vector<queue_entry> write_queue_;
-  std::vector<queue_entry> read_queue_;
-  size_t read_count_ = 0;
-  bool write_active_ = false;
+  std::map<res_id_t, res_state> state_;
 };
 
 }  // namespace ctx

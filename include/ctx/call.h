@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ctx/future.h"
+
 #define CTX_STRING1(x) #x
 #define CTX_STRING2(x) CTX_STRING1(x)
 #define CTX_LOCATION __FILE__ ":" CTX_STRING2(__LINE__)

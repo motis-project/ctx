@@ -8,60 +8,158 @@ on:
 
 jobs:
   formatting:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-20.04
     steps:
+      - uses: actions/checkout@v2
 
-    - uses: actions/checkout@v2
+      - name: Install clang-format
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 12
+          rm llvm.sh
+          sudo apt-get install -y --no-install-recommends clang-format-12
 
-    - name: Format files
-      run: find src include example -type f -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-9 -i
+      - name: Format files
+        run: find base libs modules test -type f -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-12 -i
 
-    - name: Check for differences
-      run: |
-        git status --porcelain
-        git status --porcelain | xargs -I {} -0 test -z \"{}\"
+      - name: Check for differences
+        run: |
+          git status --porcelain
+          git status --porcelain | xargs -I {} -0 test -z \"{}\"
+
   build:
-    runs-on: ubuntu-latest
-    container:
-      image: motisproject/cpp-build:latest
+    runs-on: ${{ matrix.config.os }}
     strategy:
+      fail-fast: false
       matrix:
-        cxx: [gcc-9, clang-9, clang-9-san]
-        mode: [Debug, Release]
-        exclude:
-        - cxx: clang-9-san
-          mode: Release
-    env:
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_NOHASHDIR: true
+        config:
+          - name: macos-avx2
+            cxx: clang++
+            cc: clang
+            mode: Release
+            cxxflags: -stdlib=libc++
+            os: macos-latest
+          - name: macos-noavx2
+            cxx: clang++
+            cc: clang
+            mode: Release
+            cxxflags: -stdlib=libc++
+            os: macos-latest
+          - name: linux-amd64-debug
+            cxx: g++-10
+            cc: gcc-10
+            mode: Debug
+            os: ubuntu-20.04
+            emulator: valgrind --error-exitcode=1
+            install: ninja-build valgrind
+          - name: linux-amd64-clang
+            cxx: clang++-12
+            cc: clang-12
+            mode: Release
+            cxxflags: -stdlib=libc++
+            ldflags: -lc++abi
+            os: ubuntu-20.04
+            mimalloc: Off
+            install: ninja-build
+          - name: linux-clang-tidy
+            cxx: clang++-12
+            cc: clang-12
+            mode: Debug
+            cxxflags: -stdlib=libc++
+            ldflags: -lc++abi
+            lint: true
+            os: ubuntu-20.04
+            install: ninja-build
+          - name: linux-clang-sanitizer
+            cxx: clang++-12
+            cc: clang-12
+            mode: Release
+            cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
+            cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
+            ldflags: -lc++abi
+            os: ubuntu-20.04
+            install: ninja-build
+          - name: linux-amd64-release
+            os: ubuntu-20.04
+            toolchain: x86_64-multilib-linux-musl
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
+            mode: Release
+            artifact: linux-amd64
+            install: ninja-build
+          - name: linux-amd64-noavx-release
+            os: ubuntu-20.04
+            toolchain: x86_64-multilib-linux-musl
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
+            mode: Release
+            install: ninja-build
+          - name: linux-arm64-release
+            os: ubuntu-20.04
+            toolchain: aarch64-unknown-linux-musl
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/aarch64-unknown-linux-musl/toolchain-arm64.cmake
+            install: ninja-build qemu-user-static
+            emulator: qemu-aarch64-static
 
     steps:
+      - uses: actions/checkout@v2
 
-    - uses: actions/checkout@v2
+      - uses: seanmiddleditch/gha-setup-ninja@master
+        if: matrix.config.os == 'macos-latest'
 
-    - name: Cache
-      uses: actions/cache@v1.1.2
-      with:
-        path: ${{ github.workspace }}/.ccache
-        key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+      - name: Update APT
+        if: matrix.config.os != 'macos-latest'
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt update
 
-    - name: CMake
-      run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DCTX_ASAN=`if [ "${{ matrix.cxx }}" = "clang-9-san" ]; then echo "On"; else echo "Off"; fi`
+      - name: Install LLVM
+        if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-12'
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 12
+          rm llvm.sh
+          sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12 libunwind-12-dev
 
-    - name: Build
-      run: |
-        ccache -z
-        cmake --build build --target examples
-        ccache -s
-    - name: Run Burn In
-      run: ./build/burn_in
+      - name: Install Packages
+        if: matrix.config.os != 'macos-latest'
+        run: sudo apt-get install -y --no-install-recommends ${{ matrix.config.install }}
 
-    - name: Run Fibonacci
-      run: ./build/fibonacci
+      - name: Install musl Toolchain
+        if: matrix.config.toolchain
+        run: |
+          wget https://github.com/motis-project/musl-toolchains/releases/latest/download/${{ matrix.config.toolchain }}.tar.xz
+          tar xf ${{ matrix.config.toolchain }}.tar.xz -C /opt
 
-    - name: Run Locking
-      run: ./build/locking
+      - name: CMake
+        run: |
+          cmake ${{ matrix.config.cross }} \
+            -G Ninja -S . -B build \
+            -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
+            -DCMAKE_C_FLAGS="${{ matrix.config.cflags }}" \
+            -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
+            -DCMAKE_CXX_FLAGS_DEBUG="" \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }}" \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
+            -DCTX_LINT=${{ matrix.config.lint }} \
+            -DCTX_ASAN=${{ contains(matrix.config.cxxflags, '-fsanitize=address') }} \
+            -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-10' && matrix.config.mode == 'Debug' }}
 
-    - name: Run Parallel For
-      run: ./build/parallel_for
+      - name: Build
+        run: |
+          cmake --build build --target examples
+
+      - name: Run Burn In
+        run: ${{ matrix.config.emulator }} ./build/burn_in
+
+      - name: Run Fibonacci
+        run: ${{ matrix.config.emulator }} ./build/fibonacci
+
+      - name: Run Locking
+        run: ${{ matrix.config.emulator }} ./build/locking
+
+      - name: Run Parallel For
+        run: ${{ matrix.config.emulator }} ./build/parallel_for

@@ -10,6 +10,8 @@
 
 #include "ctx/ctx.h"
 
+#include "ctx/access_scheduler.h"
+
 using namespace ctx;
 using namespace std::chrono_literals;
 using sys_clock = std::chrono::system_clock;

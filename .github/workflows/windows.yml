@@ -12,26 +12,31 @@ jobs:
 
     strategy:
       matrix:
-        mode: [Debug, Release]
+        mode: [ Debug, Release ]
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: microsoft/setup-msbuild@v1.0.0
+      - uses: actions/checkout@v2
+      - uses: microsoft/setup-msbuild@v1.0.3
 
-    - name: CMake
-      run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build
+      - name: CMake
+        run: |
+          $devShell = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
+          $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
+          Import-Module $devShell
+          Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
+          cmake `
+            -GNinja -S . -B build `
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }}
+          cmake --build build --target examples
 
-    - name: Build
-      run: cmake --build build --target examples --config ${{ matrix.mode }}
+      - name: Run Burn In
+        run: .\build\burn_in.exe
 
-    - name: Run Burn In
-      run: .\build\${{ matrix.mode }}\burn_in.exe
+      - name: Run Fibonacci
+        run: .\build\fibonacci.exe
 
-    - name: Run Fibonacci
-      run: .\build\${{ matrix.mode }}\fibonacci.exe
+      - name: Run Locking
+        run: .\build\locking.exe
 
-    - name: Run Locking
-      run: .\build\${{ matrix.mode }}\locking.exe
-
-    - name: Run Parallel For
-      run: .\build\${{ matrix.mode }}\parallel_for.exe
+      - name: Run Parallel For
+        run: .\build\parallel_for.exe

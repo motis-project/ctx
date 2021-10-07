@@ -2,6 +2,6 @@
 
 namespace ctx {
 
-enum class access_t { NONE, READ, WRITE };
+enum class access_t { READ, WRITE };
 
 }  // namespace ctx
