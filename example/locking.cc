@@ -34,18 +34,30 @@ int main() {
 
   access_scheduler<simple_data> c;
   for (int i = 0; i < 100; ++i) {
-    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_read_work(simple_data{}, read_op, op_id("read", "?", 0));
-    c.enqueue_write_work(simple_data{}, write_op, op_id("write", "?", 0));
+    c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
+              {access_request{0U, ctx::access_t::READ}});
+    c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
+              {access_request{0U, ctx::access_t::READ}});
+    c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
+              {access_request{0U, ctx::access_t::READ}});
+    c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
+              {access_request{0U, ctx::access_t::READ}});
+    c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
+              {access_request{0U, ctx::access_t::READ}});
+    c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
+              {access_request{0U, ctx::access_t::READ}});
+    c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
+              {access_request{0U, ctx::access_t::READ}});
+    c.enqueue(simple_data{}, write_op, op_id("write", "?", 0), op_type_t::WORK,
+              {access_request{0U, ctx::access_t::WRITE}});
   }
 
   constexpr auto const worker_count = 4;
   c.run(worker_count);
 
   std::cout << data.back() << "\n";
+  std::cout << c.state_.size() << "\n";
+  for (auto const& [id, res] : c.state_) {
+    std::cout << "id=" << id << ", usage_count=" << res.usage_count_ << "\n";
+  }
 }

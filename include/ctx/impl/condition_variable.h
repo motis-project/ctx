@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include "ctx/condition_variable.h"
 
 namespace ctx {
