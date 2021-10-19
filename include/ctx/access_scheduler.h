@@ -115,6 +115,9 @@ struct access_scheduler : public scheduler<Data> {
 
     auto const activate = [&]() {
       for (access_request const& a : access) {
+        auto& res_access = op->data_.res_access_[a.res_id_];
+        res_access = std::max(a.access_, res_access);
+
         auto& res_s = state_[a.res_id_];
         if (a.access_ == access_t::READ) {
           ++res_s.active_readers_;
