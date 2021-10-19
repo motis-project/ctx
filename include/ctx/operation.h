@@ -7,7 +7,9 @@
 
 #include "fcontext/fcontext.h"
 
+#include "ctx/access_t.h"
 #include "ctx/op_id.h"
+#include "ctx/res_id_t.h"
 #include "ctx/stack_manager.h"
 #include "ctx/thread_local.h"
 #include "ctx_config.h"

@@ -8,7 +8,7 @@
 
 using namespace ctx;
 
-struct simple_data {
+struct simple_data : access_data {
   void transition(transition, op_id, op_id) {}
 };
 
@@ -33,7 +33,7 @@ int main() {
   };
 
   access_scheduler<simple_data> c;
-  for (int i = 0; i < 100; ++i) {
+  for (int i = 0; i < 10000; ++i) {
     c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
               {access_request{0U, ctx::access_t::READ}});
     c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,

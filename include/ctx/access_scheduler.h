@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utl/raii.h>
+#include <cassert>
 #include <map>
 #include <mutex>
 #include <variant>
@@ -8,21 +9,30 @@
 
 #include "utl/to_vec.h"
 
+#include "ctx/access_request.h"
 #include "ctx/access_t.h"
 #include "ctx/operation.h"
+#include "ctx/res_id_t.h"
+#include "ctx/scheduler.h"
 
 namespace ctx {
 
 enum class op_type_t : uint8_t { IO, WORK };
 
-struct access_request {
-  uint64_t res_id_{0U};
-  access_t access_{access_t::READ};
-};
+template <typename Data, typename = void>
+struct is_access_data : std::false_type {};
+
+template <typename Data>
+struct is_access_data<Data,
+                      std::void_t<decltype(std::declval<Data>().res_access_)>>
+    : std::true_type {};
+
+template <typename T>
+inline constexpr auto const is_access_data_v = is_access_data<T>::value;
 
 template <typename Data>
 struct access_scheduler : public scheduler<Data> {
-  using res_id_t = uint64_t;
+  static_assert(is_access_data_v<Data>);
 
   struct queue_entry {
     op_type_t type_;
@@ -31,7 +41,7 @@ struct access_scheduler : public scheduler<Data> {
 
   struct res_state {
     bool finished() const {
-      return !active_write_ && active_readers_ == 0U &&  //
+      return active_writers_ == 0U && active_readers_ == 0U &&  //
              write_queue_.empty() && read_queue_.empty();
     }
 
@@ -39,28 +49,64 @@ struct access_scheduler : public scheduler<Data> {
     std::vector<queue_entry> read_queue_;
     size_t usage_count_{0U};
     size_t active_readers_{0U};
-    bool active_write_{false};
+    size_t active_writers_{0U};
   };
 
-  void wait_for_access(op_type_t const op_type,
-                       std::vector<access_request> const& access) {
+  void wait_for_access(op_type_t const op_type, accesses_t const& access) {
     auto l = std::unique_lock{lock_, std::defer_lock_t{}};
     auto const op = current_op<Data>();
 
-    auto const get_access = [&]() {
-      for (access_request const& a : access) {
-        auto& res_s = state_[a.res_id_];
-        if (a.access_ == access_t::READ) {
-          if (res_s.active_write_) {
-            res_s.read_queue_.emplace_back(
-                queue_entry{op_type, op->shared_from_this()});
-            return false;
-          }
+    auto const get_existing_access = [&](res_id_t const id) {
+      if (auto const it = op->data_.res_access_.find(id);
+          it != end(op->data_.res_access_)) {
+        return it->second;
+      } else {
+        return access_t::NONE;
+      }
+    };
+
+    auto const obtain_access = [&]() {
+      for (access_request const& wants : access) {
+        // case | has already | wants | require
+        // ---- | ------------+-------+---------
+        //    1 | READ        | READ  | -
+        //    2 | WRITE       | *     | -
+        //    3 | READ        | WRITE | active_readers == 1
+        //    4 | NONE        | READ  | active_writers == 0
+        //    5 | NONE        | WRITE | active_writers == active_readers == 0
+        auto const has = get_existing_access(wants.res_id_);
+
+        if (has == access_t::WRITE ||
+            (has == access_t::READ && wants.access_ == access_t::READ)) {
+          // Handles: cases 1, 2
+          continue;
         } else {
-          if (res_s.active_write_ || res_s.active_readers_ != 0U) {
-            res_s.write_queue_.emplace_back(
-                queue_entry{op_type, op->shared_from_this()});
-            return false;
+          auto& res_s = state_[wants.res_id_];
+
+          // Handles: case 3 (upgrade READ -> WRITE)
+          if (has == access_t::READ && wants.access_ == access_t::WRITE) {
+            assert(res_s.active_writers_ == 0U);
+            assert(res_s.active_readers_ >= 1U);
+            if (res_s.active_readers_ > 1) {
+              // Other readers -> we need to wait for them to finish.
+              return false;
+            }
+            continue;
+          }
+
+          // Handles: cases 4, 5 (no access -> READ or WRITE)
+          if (wants.access_ == access_t::READ) {
+            if (res_s.active_writers_ != 0U) {
+              res_s.read_queue_.emplace_back(
+                  queue_entry{op_type, op->shared_from_this()});
+              return false;
+            }
+          } else {
+            if (res_s.active_writers_ != 0U || res_s.active_readers_ != 0U) {
+              res_s.write_queue_.emplace_back(
+                  queue_entry{op_type, op->shared_from_this()});
+              return false;
+            }
           }
         }
       }
@@ -73,7 +119,7 @@ struct access_scheduler : public scheduler<Data> {
         if (a.access_ == access_t::READ) {
           ++res_s.active_readers_;
         } else {
-          res_s.active_write_ = true;
+          ++res_s.active_writers_;
         }
       }
     };
@@ -85,18 +131,23 @@ struct access_scheduler : public scheduler<Data> {
       }
     }
 
-  acquire:
-    l.lock();
-    if (!get_access()) {
+    while (true) {
+      l.lock();
+
+      // Check access.
+      if (obtain_access()) {
+        activate();  // Success - activate.
+        break;
+      }
+
+      // Not successful.
+      // Wait until resumed by another operation.
       l.unlock();
       op->suspend(/*finish = */ false);
-      goto acquire;
     }
-
-    activate();
   }
 
-  void end_access(std::vector<access_request> const& access) {
+  void end_access(accesses_t const& access) {
     auto const l = std::unique_lock{lock_};
     for (access_request const& a : access) {
       auto& res_s = state_[a.res_id_];
@@ -115,7 +166,7 @@ struct access_scheduler : public scheduler<Data> {
           unqueue(res_s.read_queue_);
         }
       } else {
-        res_s.active_write_ = false;
+        --res_s.active_writers_;
         if (!res_s.write_queue_.empty()) {
           unqueue(res_s.write_queue_);
         } else if (!res_s.read_queue_.empty()) {
@@ -134,7 +185,7 @@ struct access_scheduler : public scheduler<Data> {
 
   template <typename Fn>
   void enqueue(Data&& d, Fn&& fn, op_id const id, op_type_t const op_type,
-               std::vector<access_request>&& access) {
+               accesses_t&& access) {
     if (access.empty()) {
       (op_type == op_type_t::IO)
           ? this->enqueue_io(d, std::forward<Fn>(fn), id)
