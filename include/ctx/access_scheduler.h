@@ -128,10 +128,14 @@ struct access_scheduler : public scheduler<Data> {
   };
 
   struct mutex {
-    mutex(access_scheduler& s, op_type_t const op_type, accesses_t access)
-        : s_{s}, access_{std::move(access)} {
+    mutex(access_scheduler& s, op_type_t const op_type, accesses_t access,
+          std::vector<typename access_scheduler::res_state::res_holder> locks)
+        : s_{s}, access_{std::move(access)}, locks_{std::move(locks)} {
       wait_for_access(op_type);
     }
+
+    mutex(access_scheduler& s, op_type_t const op_type, access_t access)
+        : mutex{s, op_type, std::move(access), s.lock(access)} {}
 
     mutex(mutex const&) = delete;
     mutex(mutex&&) = delete;
@@ -264,6 +268,9 @@ struct access_scheduler : public scheduler<Data> {
 
     access_scheduler& s_;
     accesses_t access_;
+    std::vector<
+        std::shared_ptr<typename access_scheduler::res_state::res_holder>>
+        locks_;
   };
 
   ~access_scheduler() {
@@ -284,21 +291,32 @@ struct access_scheduler : public scheduler<Data> {
   template <typename Fn>
   void enqueue(Data&& d, Fn&& fn, op_id const id, op_type_t const op_type,
                accesses_t&& access) {
-    // TODO(felix) check if all resources exist and lock shared ptr
-    // TODO(felix) hand these shared_ptrs to the mutex
     if (access.empty()) {
       (op_type == op_type_t::IO)
           ? this->enqueue_io(d, std::forward<Fn>(fn), id)
           : this->enqueue_work(d, std::forward<Fn>(fn), id);
     } else {
-      auto f = [fn = std::forward<Fn>(fn), access = std::move(access), op_type,
-                this]() mutable {
-        auto lock = mutex{*this, op_type, std::move(access)};
+      auto f = [fn = std::forward<Fn>(fn), access = std::move(access),
+                locks = lock(access), op_type, this]() mutable {
+        auto lock = mutex{*this, op_type, std::move(access), std::move(locks)};
         return fn();
       };
       (op_type == op_type_t::IO) ? this->enqueue_io(d, std::move(f), id)
                                  : this->enqueue_work(d, std::move(f), id);
     }
+  }
+
+  std::vector<typename res_state::res_holder> lock(accesses_t const& access) {
+    return utl::to_vec(access, [&](access_request const& r) {
+      auto const res_it = state_.find(r.res_id_);
+      utl::verify(res_it != end(state_), "couldn't find resource {}",
+                  r.res_id_);
+
+      auto const lock = res_it->second.weak_.lock();
+      utl::verify(lock, "couldn't lock resource {}", r.res_id_);
+
+      return lock;
+    });
   }
 
   template <typename T>
@@ -335,8 +353,9 @@ struct access_scheduler : public scheduler<Data> {
   }
 
   void remove(res_id_t const res_id) {
-    // TODO(felix) release shared_ptr of resource - resource will delete itself
-    // from the map in its dtor
+    auto const it = state_.find(res_id);
+    utl::verify(it != end(state_), "could not delete resource {}", res_id);
+    it->second.holder_.reset();
   }
 
   std::mutex lock_;
