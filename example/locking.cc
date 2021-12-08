@@ -33,6 +33,7 @@ int main() {
   };
 
   access_scheduler<simple_data> c;
+  c.emplace_data(0, 0);
   for (int i = 0; i < 10000; ++i) {
     c.enqueue(simple_data{}, read_op, op_id("read", "?", 0), op_type_t::WORK,
               {access_request{0U, ctx::access_t::READ}});
