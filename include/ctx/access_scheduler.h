@@ -129,7 +129,9 @@ struct access_scheduler : public scheduler<Data> {
 
   struct mutex {
     mutex(access_scheduler& s, op_type_t const op_type, accesses_t access,
-          std::vector<typename access_scheduler::res_state::res_holder> locks)
+          std::vector<
+              std::shared_ptr<typename access_scheduler::res_state::res_holder>>
+              locks)
         : s_{s}, access_{std::move(access)}, locks_{std::move(locks)} {
       wait_for_access(op_type);
     }
@@ -306,14 +308,15 @@ struct access_scheduler : public scheduler<Data> {
     }
   }
 
-  std::vector<typename res_state::res_holder> lock(accesses_t const& access) {
+  std::vector<std::shared_ptr<typename res_state::res_holder>> lock(
+      accesses_t const& access) {
     return utl::to_vec(access, [&](access_request const& r) {
       auto const res_it = state_.find(r.res_id_);
       utl::verify(res_it != end(state_), "couldn't find resource {}",
                   r.res_id_);
 
       auto const lock = res_it->second.weak_.lock();
-      utl::verify(lock, "couldn't lock resource {}", r.res_id_);
+      utl::verify(lock != nullptr, "couldn't lock resource {}", r.res_id_);
 
       return lock;
     });
