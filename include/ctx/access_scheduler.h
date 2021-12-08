@@ -46,15 +46,17 @@ struct access_scheduler : public scheduler<Data> {
   struct res_state {
     struct res_holder {
       explicit res_holder(res_id_t const res_id) : res_id_{res_id} {}
+
       res_holder(res_holder const&) = delete;
       res_holder(res_holder&&) = delete;
       res_holder& operator=(res_holder const&) = delete;
       res_holder& operator=(res_holder&&) = delete;
 
-      virtual ~res_holder() = 0;
-      virtual void* get() const = 0;
+      virtual ~res_holder() = default;
+      virtual void* get() = 0;
 
       res_id_t res_id_;
+      bool released_{false};
     };
 
     template <typename T>
@@ -68,8 +70,10 @@ struct access_scheduler : public scheduler<Data> {
       template_res_holder& operator=(template_res_holder&&) = delete;
 
       ~template_res_holder() override {
-        auto lock = std::lock_guard{scheduler_.lock_};
-        scheduler_.state_.erase(res_id_);
+        if (!static_cast<res_holder*>(this)->released_) {
+          auto lock = std::lock_guard{scheduler_.lock_};
+          scheduler_.state_.erase(static_cast<res_holder*>(this)->res_id_);
+        }
       }
 
       void* get() override { return &res_; }
@@ -80,7 +84,9 @@ struct access_scheduler : public scheduler<Data> {
 
     template <typename T>
     res_state(access_scheduler& s, res_id_t const res_id, T&& res)
-        : holder_{std::make_shared<template_res_holder>(s, res_id, res)} {}
+        : holder_{std::make_shared<template_res_holder<T>>(
+              s, res_id, std::forward<T>(res))},
+          weak_{holder_} {}
 
     bool finished() const {
       return active_writers_ == 0U && active_readers_ == 0U &&  //
@@ -239,11 +245,6 @@ struct access_scheduler : public scheduler<Data> {
         auto& res_s = s_.state_.at(a.res_id_);
         --res_s.usage_count_;
 
-        if (res_s.usage_count_ == 0U) {
-          s_.state_.erase(a.res_id_);
-          continue;
-        }
-
         if (a.access_ == access_t::READ) {
           --res_s.active_readers_;
           if (res_s.active_readers_ == 0U && !res_s.write_queue_.empty()) {
@@ -265,6 +266,14 @@ struct access_scheduler : public scheduler<Data> {
     access_scheduler& s_;
     accesses_t access_;
   };
+
+  ~access_scheduler() {
+    for (auto const& [id, s] : state_) {
+      if (auto lock = s.weak_.lock(); lock) {
+        lock->released_ = true;
+      }
+    }
+  }
 
   void unqueue(std::vector<queue_entry>& queue) {
     auto& entry = queue.front();
@@ -294,8 +303,8 @@ struct access_scheduler : public scheduler<Data> {
   template <typename T>
   void emplace_data(ctx::res_id_t const res_id, T&& t) {
     auto const it = state_.find(res_id);
-    utl::verify(it != end(state_), "{} not in shared_data", res_id);
-    state_.emplace(res_id, *this, res_id, std::forward<T>(t));
+    utl::verify(it == end(state_), "{} already in shared_data", res_id);
+    state_.emplace(res_id, res_state{*this, res_id, std::forward<T>(t)});
   }
 
   bool includes(ctx::res_id_t const res_id) const {
@@ -306,21 +315,22 @@ struct access_scheduler : public scheduler<Data> {
   T const& get(ctx::res_id_t const res_id) const {
     auto const it = state_.find(res_id);
     utl::verify(it != end(state_), "{} not in shared_data", res_id);
-    return *reinterpret_cast<T const*>(it->second.get());
+    return *reinterpret_cast<T const*>(it->second.weak_.lock()->get());
   }
 
   template <typename T>
   T& get(ctx::res_id_t const res_id) {
     auto const it = state_.find(res_id);
     utl::verify(it != end(state_), "{} not in shared_data", res_id);
-    return *reinterpret_cast<T*>(it->second.get());
+    return *reinterpret_cast<T*>(it->second.weak_.lock()->get());
   }
 
   template <typename T>
   T const* find(ctx::res_id_t const res_id) const {
     auto const it = state_.find(res_id);
-    return it != end(state_) ? reinterpret_cast<T const*>(it->second.get())
-                             : nullptr;
+    return it != end(state_)
+               ? reinterpret_cast<T const*>(it->second.weak_.lock()->get())
+               : nullptr;
   }
 
   std::mutex lock_;
