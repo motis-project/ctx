@@ -284,6 +284,8 @@ struct access_scheduler : public scheduler<Data> {
   template <typename Fn>
   void enqueue(Data&& d, Fn&& fn, op_id const id, op_type_t const op_type,
                accesses_t&& access) {
+    // TODO(felix) check if all resources exist and lock shared ptr
+    // TODO(felix) hand these shared_ptrs to the mutex
     if (access.empty()) {
       (op_type == op_type_t::IO)
           ? this->enqueue_io(d, std::forward<Fn>(fn), id)
@@ -330,6 +332,11 @@ struct access_scheduler : public scheduler<Data> {
     return it != end(state_)
                ? reinterpret_cast<T const*>(it->second.weak_.lock()->get())
                : nullptr;
+  }
+
+  void remove(res_id_t const res_id) {
+    // TODO(felix) release shared_ptr of resource - resource will delete itself
+    // from the map in its dtor
   }
 
   std::mutex lock_;
