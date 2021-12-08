@@ -1,6 +1,5 @@
 #pragma once
 
-#include <utl/raii.h>
 #include <atomic>
 #include <cassert>
 #include <functional>
