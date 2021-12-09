@@ -149,9 +149,10 @@ struct access_scheduler : public scheduler<Data> {
 
     template <typename T>
     T& get(res_id_t const res_id) {
-      utl::verify(std::any_of(begin(access_), end(access_), [&](auto const& a) {
-        return a.res_id_ == res_id;
-      }));
+      utl::verify(
+          std::any_of(begin(access_), end(access_),
+                      [&](auto const& a) { return a.res_id_ == res_id; }),
+          "resource {} not locked", res_id);
       return s_.get<T>(res_id);
     }
 
