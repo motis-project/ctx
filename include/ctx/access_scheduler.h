@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <functional>
@@ -136,7 +137,7 @@ struct access_scheduler : public scheduler<Data> {
       wait_for_access(op_type);
     }
 
-    mutex(access_scheduler& s, op_type_t const op_type, access_t access)
+    mutex(access_scheduler& s, op_type_t const op_type, accesses_t access)
         : mutex{s, op_type, std::move(access), s.lock(access)} {}
 
     mutex(mutex const&) = delete;
@@ -146,6 +147,15 @@ struct access_scheduler : public scheduler<Data> {
 
     ~mutex() { end_access(); }
 
+    template <typename T>
+    T& get(res_id_t const res_id) {
+      utl::verify(std::any_of(begin(access_), end(access_), [&](auto const& a) {
+        return a.res_id_ == res_id;
+      }));
+      return s_.get<T>(res_id);
+    }
+
+  private:
     void wait_for_access(op_type_t const op_type) {
       auto l = std::unique_lock{s_.lock_, std::defer_lock_t{}};
       auto const op = current_op<Data>();
