@@ -38,6 +38,9 @@ template <typename Data>
 struct access_scheduler : public scheduler<Data> {
   static_assert(is_access_state_v<Data>);
 
+  explicit access_scheduler(res_id_t first_generated_res_id = 0)
+      : next_res_id_{first_generated_res_id} {}
+
   struct queue_entry {
     op_type_t type_;
     std::shared_ptr<operation<Data>> op_;
@@ -141,9 +144,9 @@ struct access_scheduler : public scheduler<Data> {
         : mutex{s, op_type, std::move(access), s.lock(access)} {}
 
     mutex(mutex const&) = delete;
-    mutex(mutex&&) = delete;
+    mutex(mutex&&) = default;
     mutex& operator=(mutex const&) = delete;
-    mutex& operator=(mutex&&) = delete;
+    mutex& operator=(mutex&&) = default;
 
     ~mutex() { end_access(); }
 
@@ -372,9 +375,11 @@ struct access_scheduler : public scheduler<Data> {
     it->second.holder_.reset();
   }
 
+  res_id_t generate_res_id() { return next_res_id_++; }
+
   std::mutex lock_;
   std::map<res_id_t, res_state> state_;
-  std::atomic<ctx::res_id_t> res_id_;
+  std::atomic<res_id_t> next_res_id_;
 };
 
 }  // namespace ctx
