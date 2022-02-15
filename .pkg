@@ -1,7 +1,7 @@
 [context]
   url=git@github.com:motis-project/context.git
   branch=develop
-  commit=511ee1c92ce1919cea500c86b14fa447b334495d
+  commit=797dd16e2b5e959997ddcd5bdeac4f80931169b6
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
