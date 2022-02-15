@@ -116,7 +116,7 @@ void operation<Data>::resume() {
   auto const t = jump_fcontext(op_ctx_, this);
   exit_op_finish_switch();
 
-  op_ctx_ = t.ctx;
+  op_ctx_ = t.fctx;
   auto const finished = t.data == nullptr;
 
   {
@@ -140,7 +140,7 @@ void operation<Data>::suspend(bool finished) {
       jump_fcontext(main_ctx_, finished ? nullptr : reinterpret_cast<void*>(1));
   enter_op_finish_switch();
 
-  main_ctx_ = t.ctx;
+  main_ctx_ = t.fctx;
 }
 
 template <typename Data>

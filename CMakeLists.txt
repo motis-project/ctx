@@ -28,7 +28,7 @@ configure_file (
 )
 
 add_library(ctx src/ctx.cc)
-target_link_libraries(ctx fcontext boost utl)
+target_link_libraries(ctx boost_context boost utl)
 target_include_directories(ctx PUBLIC include ${CMAKE_BINARY_DIR}/generated)
 target_compile_features(ctx PUBLIC cxx_std_17)
 if (NOT MSVC)

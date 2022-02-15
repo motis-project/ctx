@@ -5,7 +5,7 @@
 #include <memory>
 #include <mutex>
 
-#include "fcontext/fcontext.h"
+#include "boost/context/detail/fcontext.hpp"
 
 #include "ctx/access_t.h"
 #include "ctx/op_id.h"
@@ -24,6 +24,11 @@ void __sanitizer_finish_switch_fiber(void* fake_stack_save,
 #endif
 
 namespace ctx {
+
+using boost::context::detail::fcontext_t;
+using fcontext_transfer_t = boost::context::detail::transfer_t;
+using boost::context::detail::make_fcontext;
+using boost::context::detail::jump_fcontext;
 
 template <typename Data>
 struct scheduler;
@@ -75,7 +80,7 @@ template <typename Data>
 inline void execute(fcontext_transfer_t t) {
   auto const op = reinterpret_cast<operation<Data>*>(t.data);
   op->enter_op_finish_switch();
-  op->main_ctx_ = t.ctx;
+  op->main_ctx_ = t.fctx;
   op->start();
 }
 
