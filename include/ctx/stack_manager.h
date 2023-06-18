@@ -17,9 +17,7 @@ struct stack_handle {
   stack_handle() : stack(nullptr) {}
   stack_handle(void* allocated_mem) { set_allocated_mem(allocated_mem); }
 
-  inline void* get_allocated_mem() {
-    return get_stack_end();
-  }
+  inline void* get_allocated_mem() { return get_stack_end(); }
 
   inline void set_allocated_mem(void* mem) {
     stack = mem == nullptr ? nullptr : static_cast<char*>(mem) + kStackSize;
@@ -48,6 +46,12 @@ inline void* allocate(std::size_t const num_bytes) {
 }
 
 struct stack_manager {
+  ~stack_manager() {
+    while (list_.next_ != nullptr) {
+      std::free(list_.take());
+    }
+  }
+
   stack_handle alloc() {
     {
       auto const lock = std::lock_guard{list_mutex_};
