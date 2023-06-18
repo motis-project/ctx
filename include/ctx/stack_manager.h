@@ -18,7 +18,7 @@ struct stack_handle {
   stack_handle(void* allocated_mem) { set_allocated_mem(allocated_mem); }
 
   inline void* get_allocated_mem() {
-    return stack == nullptr ? nullptr : static_cast<char*>(stack) - kStackSize;
+    return get_stack_end();
   }
 
   inline void set_allocated_mem(void* mem) {
@@ -49,6 +49,13 @@ inline void* allocate(std::size_t const num_bytes) {
 
 struct stack_manager {
   stack_handle alloc() {
+    {
+      auto const lock = std::lock_guard{list_mutex_};
+      if (list_.next_ != nullptr) {
+        return stack_handle{list_.take()};
+      }
+    }
+
     stack_handle s(allocate(kStackSize));
 
 #ifdef CTX_ENABLE_VALGRIND
@@ -59,13 +66,29 @@ struct stack_manager {
   }
 
   void dealloc(stack_handle& s) {
-    std::free(s.get_allocated_mem());
-    s.set_allocated_mem(nullptr);
+    auto const lock = std::lock_guard{list_mutex_};
+    list_.push(s.get_allocated_mem());
 
 #ifdef CTX_ENABLE_VALGRIND
     VALGRIND_STACK_DEREGISTER(s.id);
 #endif
   }
+
+  struct node {
+    inline void* take() {
+      assert(next_ != nullptr);
+      auto const ptr = next_;
+      next_ = next_->next_;
+      return ptr;
+    }
+    inline void push(void* p) {
+      auto const mem_ptr = reinterpret_cast<node*>(p);
+      mem_ptr->next_ = next_;
+      next_ = mem_ptr;
+    }
+    node* next_{nullptr};
+  } list_{};
+  std::mutex list_mutex_;
 };
 
 }  // namespace ctx

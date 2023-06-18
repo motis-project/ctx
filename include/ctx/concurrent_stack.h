@@ -42,7 +42,7 @@ struct concurrent_stack {
   template <typename Arg>
   void push(Arg&& f) {
     std::lock_guard sync(lock_);
-    data_.emplace_back(std::forward<T>(f));
+    data_.emplace_back(std::forward<Arg>(f));
     cv_.notify_all();
   }
 
