@@ -14,20 +14,13 @@ namespace ctx {
 constexpr auto kStackSize = 1024 * 1024;
 
 struct stack_handle {
-  stack_handle() : stack(nullptr) {}
-  stack_handle(void* allocated_mem) { set_allocated_mem(allocated_mem); }
+  stack_handle();
+  stack_handle(void* allocated_mem);
 
-  inline void* get_allocated_mem() { return get_stack_end(); }
-
-  inline void set_allocated_mem(void* mem) {
-    stack = mem == nullptr ? nullptr : static_cast<char*>(mem) + kStackSize;
-  }
-
-  inline void* get_stack() { return stack; }
-
-  inline void* get_stack_end() {
-    return stack == nullptr ? nullptr : static_cast<char*>(stack) - kStackSize;
-  }
+  void* get_allocated_mem();
+  void set_allocated_mem(void* mem);
+  void* get_stack();
+  void* get_stack_end();
 
 #ifdef CTX_ENABLE_VALGRIND
   unsigned id;
@@ -37,59 +30,17 @@ private:
   void* stack;
 };
 
-inline void* allocate(std::size_t const num_bytes) {
-  auto mem = std::malloc(num_bytes);
-  if (!mem) {
-    throw std::bad_alloc();
-  }
-  return mem;
-}
+void* allocate(std::size_t const num_bytes);
 
 struct stack_manager {
-  ~stack_manager() {
-    while (list_.next_ != nullptr) {
-      std::free(list_.take());
-    }
-  }
+  ~stack_manager();
 
-  stack_handle alloc() {
-    {
-      auto const lock = std::lock_guard{list_mutex_};
-      if (list_.next_ != nullptr) {
-        return stack_handle{list_.take()};
-      }
-    }
-
-    stack_handle s(allocate(kStackSize));
-
-#ifdef CTX_ENABLE_VALGRIND
-    s.id = VALGRIND_STACK_REGISTER(s.get_stack(), s.get_stack_end());
-#endif
-
-    return s;
-  }
-
-  void dealloc(stack_handle& s) {
-    auto const lock = std::lock_guard{list_mutex_};
-    list_.push(s.get_allocated_mem());
-
-#ifdef CTX_ENABLE_VALGRIND
-    VALGRIND_STACK_DEREGISTER(s.id);
-#endif
-  }
+  stack_handle alloc();
+  void dealloc(stack_handle&);
 
   struct node {
-    inline void* take() {
-      assert(next_ != nullptr);
-      auto const ptr = next_;
-      next_ = next_->next_;
-      return ptr;
-    }
-    inline void push(void* p) {
-      auto const mem_ptr = reinterpret_cast<node*>(p);
-      mem_ptr->next_ = next_;
-      next_ = mem_ptr;
-    }
+    inline void* take();
+    inline void push(void* p);
     node* next_{nullptr};
   } list_{};
   std::mutex list_mutex_;

@@ -29,7 +29,7 @@ configure_file (
   "${CMAKE_BINARY_DIR}/generated/ctx_config.h"
 )
 
-add_library(ctx src/ctx.cc)
+add_library(ctx src/ctx.cc src/stack_manager.cc)
 target_link_libraries(ctx boost_context boost utl)
 target_include_directories(ctx PUBLIC include ${CMAKE_BINARY_DIR}/generated)
 target_compile_features(ctx PUBLIC cxx_std_17)
