@@ -37,6 +37,7 @@ stack_manager::~stack_manager() {
 }
 
 stack_handle stack_manager::alloc() {
+#ifndef CTX_ENABLE_ASAN
   {
     auto const lock = std::lock_guard{list_mutex_};
     if (list_.next_ != nullptr) {
@@ -47,6 +48,7 @@ stack_handle stack_manager::alloc() {
       return s;
     }
   }
+#endif
 
   stack_handle s(allocate(kStackSize));
 #ifdef CTX_ENABLE_VALGRIND
@@ -56,8 +58,12 @@ stack_handle stack_manager::alloc() {
 }
 
 void stack_manager::dealloc(stack_handle& s) {
+#ifndef CTX_ENABLE_ASAN
   auto const lock = std::lock_guard{list_mutex_};
   list_.push(s.get_allocated_mem());
+#else
+  std::free(s.get_allocated_mem());
+#endif
 
 #ifdef CTX_ENABLE_VALGRIND
   VALGRIND_STACK_DEREGISTER(s.id);
