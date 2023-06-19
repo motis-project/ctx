@@ -16,26 +16,23 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - uses: ilammy/msvc-dev-cmd@v1
 
       - name: CMake
         run: |
-          $devShell = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
-          $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
-          Import-Module $devShell
-          Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
           cmake `
             -GNinja -S . -B build `
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }}
           cmake --build build --target examples
+
+      - name: Run Locking
+        run: .\build\locking.exe
 
       - name: Run Burn In
         run: .\build\burn_in.exe
 
       - name: Run Fibonacci
         run: .\build\fibonacci.exe
-
-      - name: Run Locking
-        run: .\build\locking.exe
 
       - name: Run Parallel For
         run: .\build\parallel_for.exe
