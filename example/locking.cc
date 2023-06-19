@@ -22,7 +22,7 @@ int main() {
     for (auto const& d : data) {
       sum += d;
     }
-    if (sum != 0 && sum % 1000 == 0) {
+    if (sum != 0 && sum % 10000 == 0) {
       std::lock_guard<std::mutex> l{cout_mutex};
       std::cout << sum << "\n";
     }
