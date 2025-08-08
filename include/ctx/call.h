@@ -1,17 +1,21 @@
 #pragma once
 
 #include "ctx/future.h"
+#include "ctx/impl/scheduler.h"
+#include "ctx/operation.h"
+#include "ctx/scheduler.h"
 
 #define CTX_STRING1(x) #x
 #define CTX_STRING2(x) CTX_STRING1(x)
 #define CTX_LOCATION __FILE__ ":" CTX_STRING2(__LINE__)
 
-#define ctx_call(data, fn)         \
-  ctx::call<decltype(data)>(       \
-      data, fn,                    \
-      ctx::op_id(                  \
-          "unknown", CTX_LOCATION, \
-          reinterpret_cast<operation<decltype(data)>*>(this_op)->id_.index))
+#define ctx_call(data, fn)                                                \
+  ctx::call<decltype(data)>(                                              \
+      data, fn,                                                           \
+      ctx::op_id(                                                         \
+          "unknown", CTX_LOCATION,                                        \
+          reinterpret_cast<ctx::operation<decltype(data)>*>(ctx::this_op) \
+              ->id_.index_))
 
 namespace ctx {
 

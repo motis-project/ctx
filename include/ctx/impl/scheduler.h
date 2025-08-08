@@ -12,9 +12,9 @@ struct operation;
 template <typename Data>
 template <typename Fn>
 auto scheduler<Data>::post_io(Data d, Fn fn, op_id id) {
-  id.index = ++next_id_;
+  id.index_ = ++next_id_;
   auto f = std::make_shared<future<Data, decltype(fn())>>(id);
-  enqueue_io(std::forward<Data>(d), std::function<void()>([fn, f]() {
+  enqueue_io(std::forward<Data>(d), std::function<void()>([fn, f]() mutable {
                std::exception_ptr ex;
                try {
                  f->set(fn());
@@ -31,9 +31,9 @@ auto scheduler<Data>::post_io(Data d, Fn fn, op_id id) {
 template <typename Data>
 template <typename Fn>
 future_ptr<Data, void> scheduler<Data>::post_void_io(Data d, Fn fn, op_id id) {
-  id.index = ++next_id_;
+  id.index_ = ++next_id_;
   auto f = std::make_shared<future<Data, void>>(id);
-  enqueue_io(std::forward<Data>(d), std::function<void()>([fn, f]() {
+  enqueue_io(std::forward<Data>(d), std::function<void()>([fn, f]() mutable {
                std::exception_ptr ex;
                try {
                  fn();
@@ -51,9 +51,9 @@ future_ptr<Data, void> scheduler<Data>::post_void_io(Data d, Fn fn, op_id id) {
 template <typename Data>
 template <typename Fn>
 auto scheduler<Data>::post_work(Data d, Fn fn, op_id id) {
-  id.index = ++next_id_;
+  id.index_ = ++next_id_;
   auto f = std::make_shared<future<Data, decltype(fn())>>(id);
-  enqueue_work(std::forward<Data>(d), std::function<void()>([fn, f]() {
+  enqueue_work(std::forward<Data>(d), std::function<void()>([fn, f]() mutable {
                  std::exception_ptr ex;
                  try {
                    f->set(fn());
@@ -71,9 +71,9 @@ template <typename Data>
 template <typename Fn>
 future_ptr<Data, void> scheduler<Data>::post_void_work(Data d, Fn fn,
                                                        op_id id) {
-  id.index = ++next_id_;
+  id.index_ = ++next_id_;
   auto f = std::make_shared<future<Data, void>>(id);
-  enqueue_work(std::forward<Data>(d), std::function<void()>([fn, f]() {
+  enqueue_work(std::forward<Data>(d), std::function<void()>([fn, f]() mutable {
                  std::exception_ptr ex;
                  try {
                    fn();
@@ -90,7 +90,7 @@ future_ptr<Data, void> scheduler<Data>::post_void_work(Data d, Fn fn,
 
 template <typename Data>
 void scheduler<Data>::enqueue_io(Data d, std::function<void()> fn, op_id id) {
-  id.index = ++next_id_;
+  id.index_ = ++next_id_;
   enqueue_io(std::make_shared<operation<Data>>(
       std::forward<Data>(d), std::move(fn), *this, std::move(id)));
 }
@@ -103,7 +103,7 @@ void scheduler<Data>::enqueue_io(std::shared_ptr<operation<Data>> const& op) {
 
 template <typename Data>
 void scheduler<Data>::enqueue_work(Data d, std::function<void()> fn, op_id id) {
-  id.index = ++next_id_;
+  id.index_ = ++next_id_;
   enqueue_work(std::make_shared<operation<Data>>(
       std::forward<Data>(d), std::move(fn), *this, std::move(id)));
 }

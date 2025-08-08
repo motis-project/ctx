@@ -4,7 +4,7 @@
 #include <exception>
 #include <type_traits>
 
-#include "ctx/condition_variable.h"
+#include "ctx/impl/condition_variable.h"
 #include "ctx/op_id.h"
 #include "ctx/operation.h"
 

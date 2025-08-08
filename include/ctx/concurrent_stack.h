@@ -62,8 +62,9 @@ struct concurrent_stack {
 
 private:
   T get_and_remove_top() {
+    assert(!data_.empty());
     auto const r = std::move(data_.back());
-    data_.erase(begin(data_) + data_.size() - 1);
+    data_.resize(data_.size() - 1U);
     return r;
   }
 
