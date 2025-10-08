@@ -4,6 +4,8 @@
 #include <numeric>
 #include <vector>
 
+#include "boost/asio/io_context.hpp"
+
 using namespace ctx;
 
 struct simple_data {
@@ -21,7 +23,7 @@ int main() {
   std::cout << "\n";
 
   std::cout << "process:\n";
-  boost::asio::io_service ios;
+  boost::asio::io_context ios;
   scheduler<simple_data> sched;
   sched.enqueue_work(
       simple_data(),

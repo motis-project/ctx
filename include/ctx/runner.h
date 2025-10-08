@@ -8,7 +8,7 @@
 #include "utl/set_thread_name.h"
 
 #include "boost/asio/executor_work_guard.hpp"
-#include "boost/asio/io_service.hpp"
+#include "boost/asio/io_context.hpp"
 
 #include "ctx/concurrent_stack.h"
 
@@ -17,10 +17,10 @@ namespace ctx {
 struct runner {
   void stop() { ios_.stop(); }
 
-  boost::asio::io_service& ios() { return ios_; }
+  boost::asio::io_context& ios() { return ios_; }
 
   void run(unsigned thread_count, bool quit_on_ios_exit = false) {
-    ios_.reset();
+    ios_.restart();
     work_stack_.reset();
 
     auto work_guard = boost::asio::make_work_guard(ios_);
@@ -83,7 +83,7 @@ struct runner {
     work_stack_.push_bottom(std::forward<Fn>(f));
   }
 
-  boost::asio::io_service ios_;
+  boost::asio::io_context ios_;
 
 private:
   concurrent_stack<std::function<void()>> work_stack_;
